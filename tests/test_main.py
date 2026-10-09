@@ -4,7 +4,7 @@ import io
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # src ディレクトリを sys.path に追加 (単独実行・ディスカバリ時の解決用)
 _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
@@ -25,6 +25,13 @@ class TestMain(unittest.TestCase):
     def test_main(self, mock_stdout):
         main()
         self.assertEqual(mock_stdout.getvalue().strip(), "Hello, World!")
+
+    @patch("transform_xml.pdf_downloader.main")
+    def test_main_fetch_pdfs(self, mock_pdf_main):
+        mock_pdf_main.return_value = 0
+        ret = main(["--fetch-pdfs", "dummy_dir"])
+        self.assertEqual(ret, 0)
+        mock_pdf_main.assert_called_once_with(["dummy_dir"])
 
 
 if __name__ == "__main__":
