@@ -26,6 +26,20 @@ class TestMain(unittest.TestCase):
         main()
         self.assertEqual(mock_stdout.getvalue().strip(), "Hello, World!")
 
+    @patch("transform_xml.image_xml_converter.main")
+    def test_main_convert_images_to_xml(self, mock_image_xml_main):
+        mock_image_xml_main.return_value = 0
+        ret = main(["--convert-images-to-xml", "dummy_dir"])
+        self.assertEqual(ret, 0)
+        mock_image_xml_main.assert_called_once_with(["dummy_dir"])
+
+    @patch("transform_xml.pdf_image_converter.main")
+    def test_main_convert_pdfs(self, mock_convert_main):
+        mock_convert_main.return_value = 0
+        ret = main(["--convert-pdfs", "dummy_dir"])
+        self.assertEqual(ret, 0)
+        mock_convert_main.assert_called_once_with(["dummy_dir"])
+
     @patch("transform_xml.pdf_downloader.main")
     def test_main_fetch_pdfs(self, mock_pdf_main):
         mock_pdf_main.return_value = 0
