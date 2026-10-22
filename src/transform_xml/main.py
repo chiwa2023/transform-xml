@@ -18,6 +18,17 @@ def main(argv: list[str] | None = None) -> int | None:
     """CLI entry point for transform_xml."""
     args = sys.argv[1:] if argv is None else argv
 
+    # #5 XML部分統合PGの実行 (--integrate-xml / --merge-xml / integrate-xml / merge-xml)
+    if args and args[0] in (
+        "--integrate-xml",
+        "--merge-xml",
+        "integrate-xml",
+        "merge-xml",
+    ):
+        from transform_xml.xml_integrator import main as xml_integrate_main
+
+        return xml_integrate_main(args[1:])
+
     # #4 画像XML部分変換PGの実行 (--convert-images-to-xml / --images-to-xml / convert-images-to-xml / images-to-xml)
     if args and args[0] in (
         "--convert-images-to-xml",
@@ -130,12 +141,24 @@ def main(argv: list[str] | None = None) -> int | None:
 
    #5 XML(部分)を統合してpdfに対して1XMLとなるよう成形する『XML部分変換PG』
    #5-1 起動条件.処理ディレクトリの下位ディレクトリから、XML変換ログが存在存在するディレクトリを抽出する        
-   #5-2 XML変換ログを開き、すべてのページが変換されていることを確認する。ログに未変換が記載されている場合はメッセージを出しでそのpdf(XML部分)をスキップしたメッセージを出す
+   #5-2 XML変換ログを開き、すべてのページが部分XMLに変換されていることを確認する。ログに未変換が記載されている場合はメッセージを出しでそのpdf(XML部分)をスキップしたメッセージを出す
    #5-3 部分がすべてそろっている場合、すべてのXML部分を開き、フォーマットサンプルに従って連結する
    #5-4 5-2,5-4を取得されたディレクトリすべてに対して行う
    #5-z 上記の作業を終えた時点で作業完了メッセージを出して終了する
-   #5-y (テスト起動条件は前実装が完了した時点で設定)
    #5-x 基本的に実行予定はないが #1 #2 #3 #4 #5 を連続処理する場合は #1 で巡回処理の成果物を残した県別ディレクトリ(例.C:\transfer-xml\24)を #5 に起動条件として引き渡す
+   #5-y テスト材料は  tests\fixtures\27 を使用すること。処理後 tests\fixtures\27_ans 内の tests\fixtures\27_ans\（令和７年分）\（令和７年分）_2\藪野裕道後援会\藪野裕道後援会.xml と tests\fixtures\27_ans\tmp\2022年ホリエモン新党\2022年ホリエモン新党.xml と同一内容のファイルが作成されること。#5-3aから#5-3j処理仕様に従ったはずであるのに、<SYUUSHI_UMU>などで値が一致しない場合は実装中にすみやかに不一致部分を申告すること
+
+   #5-3a config\template\SYUUSI_least.xml　を作業ディレクトリに複写し ディレクトリ名にファイル名を変更し、最終成果物ファイルとする。編集作業できるようファイルオープンする 例： tests\fixtures\27\tmp\2022年ホリエモン新党 で作業を行う場合は 2022年ホリエモン新党.xml を作成する
+   #5-3b 部分XML(2022年ホリエモン新党_0001.xml) を開き、様式番号タブ(<SYUUSHI07_01>) を確認し、様式番号と様式番号枝番(様式番号1,様式番号枝番なし)であることを確認する
+   #5-3c 成果物ファイルにおける同一様式番号タブ(<SYUUSHI07_01>) を取得する
+   #5-3d config\template\blank フォルダ意に格納された 様式番号1,様式番号枝番なしに該当するファイル 01_01_blank.xml の内容を取得する。ファイル名の命名規則はXML表示順_様式番号(あれば_様式番号枝番).xml である
+   #5-3e 01_01_blank.xml の内容と成果物ファイルにおける同一様式番号タブ(<SYUUSHI07_01>) の内容が一致する場合、成果物ファイルにおける同一様式番号タブ(<SYUUSHI07_01>) の内容を 2022年ホリエモン新党_0001.xml の内容に置換する
+   #5-3f 比較した 01_01_blank.xml の頭2桁01(XML表示順)を一時的に記憶する
+   #5-3g 部分XML 20022年ホリエモン新党_0007.xml に対して 3bから3eの処理後、同一の様式番号、様式番号枝番をもつ 20022年ホリエモン新党_0008.xml を処理する場合、5-3eの空白時内容と成果物の編集済の内容が一致しなくなる。その場合は同様式区分、様式区分番号のタグ内に 20022年ホリエモン新党_0008.xml の <SHEET></SHEET> の内容を追加する
+   #5-3h 3b-3gの内容をすべてのページ部分XMLに対して行う
+   #5-3i 01_01_blank.xml , 02_02_blank.xml , 35_17_blank.xml ,49_20_blank.xml を比較に使用し、  一時的に保存した xx_yy_zz_blank.xml の頭2桁リストが  01,02,35,49 であった場合、<SYUUSHI_UMU_FLG> <SYUUSHI_UMU> の01番目、02番目、35番目、49番目を1に変更することで存在フラグを立てる
+   #5-3j 編集内容を保存してファイルを保存する
+
 
 
 if __name__ == "__main__":

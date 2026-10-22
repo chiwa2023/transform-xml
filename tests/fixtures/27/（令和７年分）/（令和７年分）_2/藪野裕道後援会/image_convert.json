@@ -1,0 +1,91 @@
+{
+  "pdf_name": "藪野裕道後援会.pdf",
+  "pdf_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会.pdf",
+  "output_dir": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会",
+  "total_pages": 7,
+  "converted_pages": 7,
+  "failed_pages": 0,
+  "status": "COMPLETED",
+  "error_message": null,
+  "started_at": "2026-10-12T07:52:19.845758+09:00",
+  "finished_at": "2026-10-12T07:52:20.413058+09:00",
+  "page_records": [
+    {
+      "page_number": 1,
+      "image_filename": "藪野裕道後援会_0001.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0001.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.002681+09:00"
+    },
+    {
+      "page_number": 2,
+      "image_filename": "藪野裕道後援会_0002.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0002.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.077217+09:00"
+    },
+    {
+      "page_number": 3,
+      "image_filename": "藪野裕道後援会_0003.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0003.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.142528+09:00"
+    },
+    {
+      "page_number": 4,
+      "image_filename": "藪野裕道後援会_0004.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0004.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.215646+09:00"
+    },
+    {
+      "page_number": 5,
+      "image_filename": "藪野裕道後援会_0005.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0005.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.277996+09:00"
+    },
+    {
+      "page_number": 6,
+      "image_filename": "藪野裕道後援会_0006.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0006.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.348449+09:00"
+    },
+    {
+      "page_number": 7,
+      "image_filename": "藪野裕道後援会_0007.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0007.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:52:20.413029+09:00"
+    }
+  ]
+}

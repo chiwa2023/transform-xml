@@ -47,6 +47,13 @@ class TestMain(unittest.TestCase):
         self.assertEqual(ret, 0)
         mock_pdf_main.assert_called_once_with(["dummy_dir"])
 
+    @patch("transform_xml.xml_integrator.main")
+    def test_main_integrate_xml(self, mock_xml_integrate_main):
+        mock_xml_integrate_main.return_value = 0
+        ret = main(["--integrate-xml", "dummy_dir"])
+        self.assertEqual(ret, 0)
+        mock_xml_integrate_main.assert_called_once_with(["dummy_dir"])
+
 
 if __name__ == "__main__":
     unittest.main()

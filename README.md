@@ -11,7 +11,10 @@ transform-xml/
 │   └── settings.json         # VS Code用テスト・Python設定
 ├── config/
 │   ├── settings.env.example  # 全体設定環境変数サンプル
-│   └── site_crawler_config.json # サイト巡回設定
+│   ├── site_crawler_config.json # サイト巡回設定
+│   └── template/             # XML成形用テンプレート
+│       ├── SYUUSI_least.xml  # 基本骨格XML
+│       └── blank/            # 各様式・枝番ブランクXML (01〜49)
 ├── src/
 │   └── transform_xml/
 │       ├── __init__.py       # パッケージ定義
@@ -20,19 +23,23 @@ transform-xml/
 │       ├── site_crawler.py   # #1 サイト巡回PG
 │       ├── pdf_downloader.py # #2 PDF取得PG
 │       ├── pdf_image_converter.py # #3 PDF画像変換PG
-│       └── image_xml_converter.py # #4 画像XML部分変換PG
+│       ├── image_xml_converter.py # #4 画像XML部分変換PG
+│       └── xml_integrator.py # #5 XML部分統合PG
 ├── tests/
 │   ├── fixtures/             # テストデータ (フィクスチャ)
 │   │   ├── 24/               # 都道府県別テストデータサンプル (PDFダウンロード用)
 │   │   ├── 25/               # 都道府県別テストデータサンプル (PDF画像変換用)
 │   │   ├── 26/               # 都道府県別テストデータサンプル (画像XML部分変換用)
+│   │   ├── 27/               # 都道府県別テストデータサンプル (XML部分統合用)
+│   │   ├── 27_ans/           # XML部分統合の期待値正解XML
 │   │   └── tmp_ans/          # XML変換の期待値・定数設計書
 │   ├── __init__.py
 │   ├── test_main.py          # メイン処理テスト
 │   ├── test_site_crawler.py  # サイト巡回テスト
 │   ├── test_pdf_downloader.py# PDF取得テスト
 │   ├── test_pdf_image_converter.py # PDF画像変換テスト
-│   └── test_image_xml_converter.py # 画像XML部分変換テスト
+│   ├── test_image_xml_converter.py # 画像XML部分変換テスト
+│   └── test_xml_integrator.py # XML部分統合テスト
 ├── .gitignore
 ├── LICENSE
 ├── verify_claude_api.py      # Claude API 疎通確認用単独検証PG
@@ -195,23 +202,77 @@ transform-xml --convert-images-to-xml <対象ディレクトリ>
 
 ---
 
-## 6. テスト実行
+### 6. #5 XML部分統合PG (`xml_integrator`)
+
+指定されたディレクトリの下位ディレクトリからXML変換ログ（`xml_convert.log` / `xml_convert.json`）が存在するディレクトリを抽出し、すべてのページが正常に部分XMLに変換されているか検証した上で、各ページの部分XMLを `config/template/SYUUSI_least.xml` をベースに1つの完成成果物XML（`{ディレクトリ名}.xml`）に成形・統合します。
+
+- **多ページ集約:** 同一の様式番号・枝番が複数ページにまたがる場合（例: その15が複数ページ）、同一タグ内に `<SHEET>...</SHEET>` を順次追加します。
+- **存在フラグ更新:** 出現した様式番号・枝番に対応する `config/template/blank` のファイル命名規則（表示順 `01`〜`49`）に基づき、`<SYUUSHI_UMU>` の該当フラグ（1文字目〜49文字目）を `'1'` に更新します。
+- **文字コード・改行:** 元テンプレートおよび提出標準仕様に合わせて `Shift_JIS` (`CP932`) / CRLF で保存します。
+
+#### 6.1.1 スクリプト直接実行
+
+```bash
+# 基本実行
+python src/transform_xml/xml_integrator.py <対象ディレクトリ>
+
+# 例: tests/fixtures/27 を対象に実行
+python src/transform_xml/xml_integrator.py tests/fixtures/27
+
+# テンプレートディレクトリを明示指定して実行
+python src/transform_xml/xml_integrator.py tests/fixtures/27 --template-dir config/template
+```
+
+#### 6.1.2 `main.py` 経由の実行
+
+```bash
+python src/transform_xml/main.py --integrate-xml <対象ディレクトリ>
+# または
+python src/transform_xml/main.py --merge-xml <対象ディレクトリ>
+```
+
+#### 6.1.3 モジュール実行 (`python -m`) または CLI
+
+```bash
+# PowerShell
+$env:PYTHONPATH="src"; python -m transform_xml.xml_integrator <対象ディレクトリ>
+
+# Bash / Linux / macOS
+PYTHONPATH=src python -m transform_xml.xml_integrator <対象ディレクトリ>
+
+# パッケージインストール後 (pip install -e .)
+transform-xml --integrate-xml <対象ディレクトリ>
+```
+
+#### 6.1.4 オプション一覧
+
+| 引数 / オプション |                      説明                      |       デフォルト値        |
+| :---------------- | :--------------------------------------------- | :------------------------ |
+| `target_dir`      | XML変換ログが存在するディレクトリ（必須）      | -                         |
+| `--template-dir`  | テンプレート配置ディレクトリ                   | `config/template`         |
+
+---
+
+## 7. テスト実行
 
 ```bash
 # 全テストの実行 (unittest)
 python -m unittest discover -s tests -v
 
-# 画像XML部分変換機能のテストのみ実行
+# XML部分統合機能のテストのみ実行 (#5)
+python -m unittest tests/test_xml_integrator.py -v
+
+# 画像XML部分変換機能のテストのみ実行 (#4)
 python -m unittest tests/test_image_xml_converter.py -v
 
-# PDF取得機能のテストのみ実行
+# PDF取得機能のテストのみ実行 (#2)
 python -m unittest tests/test_pdf_downloader.py -v
 
 # メイン処理テストの実行
 python -m unittest tests/test_main.py -v
 ```
 
-## 7. パッケージのインストール (編集可能モード)
+## 8. パッケージのインストール (編集可能モード)
 
 ```bash
 pip install -e .
@@ -222,9 +283,10 @@ transform-xml --crawl <地方公共団体コード県>
 transform-xml --fetch-pdfs <対象ディレクトリ>
 transform-xml --convert-pdfs <対象ディレクトリ>
 transform-xml --convert-images-to-xml <対象ディレクトリ>
+transform-xml --integrate-xml <対象ディレクトリ>
 ```
 
-## 8. OCRエンジン
+## 9. OCRエンジン
 
 本プロジェクトの画像XML変換（`image_xml_converter`）では、環境や目的に応じて **AI不使用（Tesseract OCR）** と **AI使用（Claude Vision API）** の2種類のOCRエンジンを利用できます。
 

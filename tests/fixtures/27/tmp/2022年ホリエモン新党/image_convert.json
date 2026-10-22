@@ -1,0 +1,157 @@
+{
+  "pdf_name": "2022年ホリエモン新党.pdf",
+  "pdf_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党.pdf",
+  "output_dir": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党",
+  "total_pages": 13,
+  "converted_pages": 13,
+  "failed_pages": 0,
+  "status": "COMPLETED",
+  "error_message": null,
+  "started_at": "2026-10-12T07:53:05.675435+09:00",
+  "finished_at": "2026-10-12T07:53:07.057035+09:00",
+  "page_records": [
+    {
+      "page_number": 1,
+      "image_filename": "2022年ホリエモン新党_0001.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0001.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:05.842282+09:00"
+    },
+    {
+      "page_number": 2,
+      "image_filename": "2022年ホリエモン新党_0002.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0002.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:05.952256+09:00"
+    },
+    {
+      "page_number": 3,
+      "image_filename": "2022年ホリエモン新党_0003.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0003.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.048926+09:00"
+    },
+    {
+      "page_number": 4,
+      "image_filename": "2022年ホリエモン新党_0004.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0004.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.144789+09:00"
+    },
+    {
+      "page_number": 5,
+      "image_filename": "2022年ホリエモン新党_0005.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0005.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.245787+09:00"
+    },
+    {
+      "page_number": 6,
+      "image_filename": "2022年ホリエモン新党_0006.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0006.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.349900+09:00"
+    },
+    {
+      "page_number": 7,
+      "image_filename": "2022年ホリエモン新党_0007.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0007.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.449448+09:00"
+    },
+    {
+      "page_number": 8,
+      "image_filename": "2022年ホリエモン新党_0008.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0008.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.548864+09:00"
+    },
+    {
+      "page_number": 9,
+      "image_filename": "2022年ホリエモン新党_0009.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0009.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.655452+09:00"
+    },
+    {
+      "page_number": 10,
+      "image_filename": "2022年ホリエモン新党_0010.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0010.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.754118+09:00"
+    },
+    {
+      "page_number": 11,
+      "image_filename": "2022年ホリエモン新党_0011.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0011.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.863493+09:00"
+    },
+    {
+      "page_number": 12,
+      "image_filename": "2022年ホリエモン新党_0012.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0012.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:06.960195+09:00"
+    },
+    {
+      "page_number": 13,
+      "image_filename": "2022年ホリエモン新党_0013.png",
+      "image_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0013.png",
+      "width": 2341,
+      "height": 1655,
+      "dpi": 200,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-12T07:53:07.057006+09:00"
+    }
+  ]
+}

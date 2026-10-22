@@ -1,0 +1,91 @@
+{
+  "dir_name": "藪野裕道後援会",
+  "dir_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会",
+  "total_images": 7,
+  "converted_xmls": 2,
+  "empty_xmls": 5,
+  "failed_xmls": 0,
+  "status": "COMPLETED",
+  "error_message": null,
+  "started_at": "2026-10-21T07:21:30.487824+09:00",
+  "finished_at": "2026-10-21T07:21:36.204641+09:00",
+  "page_records": [
+    {
+      "page_number": 1,
+      "image_filename": "藪野裕道後援会_0001.png",
+      "xml_filename": "藪野裕道後援会_0001.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0001.xml",
+      "form_number": null,
+      "branch_number": null,
+      "status": "EMPTY",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:32.210600+09:00"
+    },
+    {
+      "page_number": 2,
+      "image_filename": "藪野裕道後援会_0002.png",
+      "xml_filename": "藪野裕道後援会_0002.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0002.xml",
+      "form_number": null,
+      "branch_number": null,
+      "status": "EMPTY",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:32.701225+09:00"
+    },
+    {
+      "page_number": 3,
+      "image_filename": "藪野裕道後援会_0003.png",
+      "xml_filename": "藪野裕道後援会_0003.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0003.xml",
+      "form_number": 7,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:33.141991+09:00"
+    },
+    {
+      "page_number": 4,
+      "image_filename": "藪野裕道後援会_0004.png",
+      "xml_filename": "藪野裕道後援会_0004.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0004.xml",
+      "form_number": 13,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:34.145551+09:00"
+    },
+    {
+      "page_number": 5,
+      "image_filename": "藪野裕道後援会_0005.png",
+      "xml_filename": "藪野裕道後援会_0005.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0005.xml",
+      "form_number": null,
+      "branch_number": null,
+      "status": "EMPTY",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:34.593854+09:00"
+    },
+    {
+      "page_number": 6,
+      "image_filename": "藪野裕道後援会_0006.png",
+      "xml_filename": "藪野裕道後援会_0006.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0006.xml",
+      "form_number": null,
+      "branch_number": null,
+      "status": "EMPTY",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:35.348186+09:00"
+    },
+    {
+      "page_number": 7,
+      "image_filename": "藪野裕道後援会_0007.png",
+      "xml_filename": "藪野裕道後援会_0007.xml",
+      "xml_path": "C:\\workspace\\git\\transform-xml\\tests\\fixtures\\27\\（令和７年分）\\（令和７年分）_2\\藪野裕道後援会\\藪野裕道後援会_0007.xml",
+      "form_number": null,
+      "branch_number": null,
+      "status": "EMPTY",
+      "error_message": null,
+      "converted_at": "2026-10-21T07:21:36.204616+09:00"
+    }
+  ]
+}

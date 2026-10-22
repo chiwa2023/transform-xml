@@ -1,0 +1,157 @@
+{
+  "dir_name": "2022年ホリエモン新党",
+  "dir_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党",
+  "total_images": 13,
+  "converted_xmls": 13,
+  "empty_xmls": 0,
+  "failed_xmls": 0,
+  "status": "COMPLETED",
+  "error_message": null,
+  "started_at": "2026-10-19T09:34:15.793210+09:00",
+  "finished_at": "2026-10-19T09:35:28.461830+09:00",
+  "page_records": [
+    {
+      "page_number": 1,
+      "image_filename": "2022年ホリエモン新党_0001.png",
+      "xml_filename": "2022年ホリエモン新党_0001.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0001.xml",
+      "form_number": 1,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:20.375290+09:00"
+    },
+    {
+      "page_number": 2,
+      "image_filename": "2022年ホリエモン新党_0002.png",
+      "xml_filename": "2022年ホリエモン新党_0002.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0002.xml",
+      "form_number": 2,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:25.967467+09:00"
+    },
+    {
+      "page_number": 3,
+      "image_filename": "2022年ホリエモン新党_0003.png",
+      "xml_filename": "2022年ホリエモン新党_0003.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0003.xml",
+      "form_number": 6,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:28.878328+09:00"
+    },
+    {
+      "page_number": 4,
+      "image_filename": "2022年ホリエモン新党_0004.png",
+      "xml_filename": "2022年ホリエモン新党_0004.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0004.xml",
+      "form_number": 7,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:32.747063+09:00"
+    },
+    {
+      "page_number": 5,
+      "image_filename": "2022年ホリエモン新党_0005.png",
+      "xml_filename": "2022年ホリエモン新党_0005.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0005.xml",
+      "form_number": 7,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:40.539417+09:00"
+    },
+    {
+      "page_number": 6,
+      "image_filename": "2022年ホリエモン新党_0006.png",
+      "xml_filename": "2022年ホリエモン新党_0006.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0006.xml",
+      "form_number": 13,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:45.544668+09:00"
+    },
+    {
+      "page_number": 7,
+      "image_filename": "2022年ホリエモン新党_0007.png",
+      "xml_filename": "2022年ホリエモン新党_0007.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0007.xml",
+      "form_number": 15,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:34:58.655271+09:00"
+    },
+    {
+      "page_number": 8,
+      "image_filename": "2022年ホリエモン新党_0008.png",
+      "xml_filename": "2022年ホリエモン新党_0008.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0008.xml",
+      "form_number": 3,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:04.313384+09:00"
+    },
+    {
+      "page_number": 9,
+      "image_filename": "2022年ホリエモン新党_0009.png",
+      "xml_filename": "2022年ホリエモン新党_0009.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0009.xml",
+      "form_number": 15,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:08.462455+09:00"
+    },
+    {
+      "page_number": 10,
+      "image_filename": "2022年ホリエモン新党_0010.png",
+      "xml_filename": "2022年ホリエモン新党_0010.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0010.xml",
+      "form_number": 15,
+      "branch_number": 2,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:14.157124+09:00"
+    },
+    {
+      "page_number": 11,
+      "image_filename": "2022年ホリエモン新党_0011.png",
+      "xml_filename": "2022年ホリエモン新党_0011.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0011.xml",
+      "form_number": 17,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:20.860953+09:00"
+    },
+    {
+      "page_number": 12,
+      "image_filename": "2022年ホリエモン新党_0012.png",
+      "xml_filename": "2022年ホリエモン新党_0012.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0012.xml",
+      "form_number": 20,
+      "branch_number": null,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:25.220088+09:00"
+    },
+    {
+      "page_number": 13,
+      "image_filename": "2022年ホリエモン新党_0013.png",
+      "xml_filename": "2022年ホリエモン新党_0013.xml",
+      "xml_path": "C:\\transfer-xml\\26\\tmp\\2022年ホリエモン新党\\2022年ホリエモン新党_0013.xml",
+      "form_number": 7,
+      "branch_number": 1,
+      "status": "SUCCESS",
+      "error_message": null,
+      "converted_at": "2026-10-19T09:35:28.461777+09:00"
+    }
+  ]
+}
