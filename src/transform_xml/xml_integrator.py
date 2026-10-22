@@ -14,6 +14,8 @@ _SRC_DIR = Path(__file__).resolve().parent.parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from transform_xml.config import find_env_file_in_argv, resolve_env_path
+
 # 定数定義
 XML_CONVERT_LOG_NAME = "xml_convert.log"
 XML_CONVERT_JSON_NAME = "xml_convert.json"
@@ -490,17 +492,27 @@ def integrate_single_dir(
 
 
 def integrate_xml_in_target_dir(
-    target_dir: Path, template_dir: Path | None = None
+    target_dir: Path,
+    template_dir: Path | None = None,
+    env_file_path: Path | str | None = None,
 ) -> BatchIntegrationResult:
     """Batch integrate partial XMLs in all target directories (#5-4, #5-z).
 
     Args:
         target_dir: 処理対象ルートディレクトリ
         template_dir: テンプレート配置ディレクトリ
+        env_file_path: 設定ファイルパス
 
     Returns:
         BatchIntegrationResult オブジェクト
     """
+    if template_dir is None:
+        template_dir = resolve_env_path(
+            "TEMPLATE_DIR",
+            env_file_path=env_file_path,
+            default=_DEFAULT_TEMPLATE_DIR,
+        )
+
     target_dir = Path(target_dir).resolve()
     target_dirs = find_integration_targets(target_dir)
 
@@ -542,6 +554,13 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         終了コード (0: 成功, 1: 失敗)
     """
+    env_file = find_env_file_in_argv(argv)
+    initial_template_dir = resolve_env_path(
+        "TEMPLATE_DIR",
+        env_file_path=env_file,
+        default=_DEFAULT_TEMPLATE_DIR,
+    )
+
     parser = argparse.ArgumentParser(
         description="XML(部分)を統合してpdfに対して1XMLとなるよう成形する『XML部分統合PG』"
     )
@@ -554,8 +573,15 @@ def main(argv: list[str] | None = None) -> int:
         "--template-dir",
         dest="template_dir",
         type=Path,
+        default=initial_template_dir,
+        help=f"テンプレート配置ディレクトリ (デフォルト: settings.env または {_DEFAULT_TEMPLATE_DIR})",
+    )
+    parser.add_argument(
+        "--env-file",
+        dest="env_file_path",
+        type=Path,
         default=None,
-        help="テンプレート配置ディレクトリ (デフォルト: config/template)",
+        help="全体設定ファイルパス (デフォルト: config/settings.env または .env)",
     )
 
     args = parser.parse_args(argv)

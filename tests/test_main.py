@@ -11,20 +11,13 @@ _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from transform_xml.main import hello_world, main
+from transform_xml.main import main
 
 
 class TestMain(unittest.TestCase):
-    def test_hello_world_default(self):
-        self.assertEqual(hello_world(), "Hello, World!")
-
-    def test_hello_world_custom_name(self):
-        self.assertEqual(hello_world("Python"), "Hello, Python!")
-
-    @patch("sys.stdout", new_callable=io.StringIO)
-    def test_main(self, mock_stdout):
-        main()
-        self.assertEqual(mock_stdout.getvalue().strip(), "Hello, World!")
+    def test_main_default(self):
+        ret = main([])
+        self.assertEqual(ret, 0)
 
     @patch("transform_xml.image_xml_converter.main")
     def test_main_convert_images_to_xml(self, mock_image_xml_main):
@@ -53,6 +46,27 @@ class TestMain(unittest.TestCase):
         ret = main(["--integrate-xml", "dummy_dir"])
         self.assertEqual(ret, 0)
         mock_xml_integrate_main.assert_called_once_with(["dummy_dir"])
+
+    @patch("transform_xml.fetch_pipeline.main")
+    def test_main_fetch_pipeline(self, mock_fetch_pipeline):
+        mock_fetch_pipeline.return_value = 0
+        ret = main(["--fetch-pipeline", "24"])
+        self.assertEqual(ret, 0)
+        mock_fetch_pipeline.assert_called_once_with(["24"])
+
+    @patch("transform_xml.analyze_pipeline.main")
+    def test_main_analyze_pipeline(self, mock_analyze_pipeline):
+        mock_analyze_pipeline.return_value = 0
+        ret = main(["--analyze-pipeline", "dummy_dir"])
+        self.assertEqual(ret, 0)
+        mock_analyze_pipeline.assert_called_once_with(["dummy_dir"])
+
+    @patch("transform_xml.main.run_full_pipeline")
+    def test_main_full_pipeline(self, mock_full_pipeline):
+        mock_full_pipeline.return_value = 0
+        ret = main(["--all", "24"])
+        self.assertEqual(ret, 0)
+        mock_full_pipeline.assert_called_once_with(["24"])
 
 
 if __name__ == "__main__":

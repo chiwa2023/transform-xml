@@ -13,6 +13,12 @@ _SRC_DIR = Path(__file__).resolve().parent.parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from transform_xml.config import (
+    find_env_file_in_argv,
+    resolve_env_int,
+    resolve_env_str,
+)
+
 try:
     import pypdfium2 as pdfium
     from PIL import Image
@@ -277,19 +283,26 @@ def convert_single_pdf(
 
 def convert_pdfs_in_dir(
     target_dir: Path | str,
-    dpi: int = DEFAULT_DPI,
-    image_format: str = DEFAULT_FORMAT,
+    dpi: int | None = None,
+    image_format: str | None = None,
+    env_file_path: Path | str | None = None,
 ) -> BatchConversionResult:
     """Execute PDF image conversion processing for target directory (#3 pdf画像変換PG).
 
     Args:
         target_dir: Target directory containing PDF files (recursively scanned).
-        dpi: Resolution in DPI (default 200).
-        image_format: Image format (default 'PNG').
+        dpi: Resolution in DPI (defaults to settings.env or 200).
+        image_format: Image format (defaults to settings.env or 'PNG').
+        env_file_path: Optional path to settings.env.
 
     Returns:
         BatchConversionResult containing operation summary.
     """
+    if dpi is None:
+        dpi = resolve_env_int("PDF_IMAGE_DPI", "DPI", env_file_path=env_file_path, default=DEFAULT_DPI)
+    if image_format is None:
+        image_format = resolve_env_str("PDF_IMAGE_FORMAT", "IMAGE_FORMAT", env_file_path=env_file_path, default=DEFAULT_FORMAT)
+
     resolved_dir = Path(target_dir).resolve()
     if not resolved_dir.exists():
         raise FileNotFoundError(f"指定されたディレクトリが存在しません: {resolved_dir}")
@@ -365,6 +378,20 @@ def convert_pdfs_in_dir(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for PDF image converter (#3 pdf画像変換PG)."""
+    env_file = find_env_file_in_argv(argv)
+    initial_dpi = resolve_env_int(
+        "PDF_IMAGE_DPI",
+        "DPI",
+        env_file_path=env_file,
+        default=DEFAULT_DPI,
+    )
+    initial_format = resolve_env_str(
+        "PDF_IMAGE_FORMAT",
+        "IMAGE_FORMAT",
+        env_file_path=env_file,
+        default=DEFAULT_FORMAT,
+    )
+
     parser = argparse.ArgumentParser(description="#3 pdf画像変換PG")
     parser.add_argument(
         "target_dir",
@@ -375,16 +402,23 @@ def main(argv: list[str] | None = None) -> int:
         "--dpi",
         dest="dpi",
         type=int,
-        default=DEFAULT_DPI,
-        help=f"画像解像度 DPI (デフォルト: {DEFAULT_DPI})",
+        default=initial_dpi,
+        help=f"画像解像度 DPI (デフォルト: settings.env または {DEFAULT_DPI})",
     )
     parser.add_argument(
         "--format",
         dest="image_format",
         type=str,
-        default=DEFAULT_FORMAT,
+        default=initial_format,
         choices=["PNG", "png", "JPEG", "jpeg", "JPG", "jpg"],
-        help=f"出力画像フォーマット (デフォルト: {DEFAULT_FORMAT})",
+        help=f"出力画像フォーマット (デフォルト: settings.env または {DEFAULT_FORMAT})",
+    )
+    parser.add_argument(
+        "--env-file",
+        dest="env_file_path",
+        type=Path,
+        default=None,
+        help="全体設定ファイルパス (デフォルト: config/settings.env または .env)",
     )
 
     args = parser.parse_args(argv)

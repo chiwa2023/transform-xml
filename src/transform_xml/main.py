@@ -8,15 +8,186 @@ _SRC_DIR = Path(__file__).resolve().parent.parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from transform_xml.analyze_pipeline import run_analyze_pipeline
+from transform_xml.fetch_pipeline import run_fetch_pipeline
+from transform_xml.site_crawler import resolve_output_dir, validate_pref_code
 
-def hello_world(name: str = "World") -> str:
-    """Return a hello world greeting message."""
-    return f"Hello, {name}!"
+
+def run_full_pipeline(argv: list[str] | None = None) -> int:
+    """Execute all processes end-to-end (#1 -> #2 -> #3 -> #4 -> #5)."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="全処理通し実行PG (#1 サイト巡回 -> #2 PDF取得 -> #3 PDF画像変換 -> #4 画像XML部分変換 -> #5 XML部分統合)"
+    )
+    parser.add_argument(
+        "pref_code",
+        help="地方公共団体コード県 (00: 総務省, 01〜47: 都道府県)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        dest="output_dir",
+        type=Path,
+        default=None,
+        help="成果物保存ディレクトリの直接指定 (未指定時は設定ファイルから取得)",
+    )
+    parser.add_argument(
+        "--config",
+        dest="config_path",
+        type=Path,
+        default=None,
+        help="サイト巡回設定ファイルパス",
+    )
+    parser.add_argument(
+        "--env-file",
+        dest="env_file_path",
+        type=Path,
+        default=None,
+        help="全体設定ファイルパス (デフォルト: config/settings.env または .env)",
+    )
+    parser.add_argument(
+        "--max-depth",
+        dest="max_depth",
+        type=int,
+        default=None,
+        help="巡回階層上限",
+    )
+    parser.add_argument(
+        "--sleep",
+        dest="sleep_sec",
+        type=float,
+        default=None,
+        help="待機秒数",
+    )
+    parser.add_argument(
+        "--timeout",
+        dest="timeout",
+        type=float,
+        default=None,
+        help="HTTPリクエストタイムアウト秒数",
+    )
+    parser.add_argument(
+        "--dpi",
+        dest="dpi",
+        type=int,
+        default=None,
+        help="画像解像度 DPI",
+    )
+    parser.add_argument(
+        "--format",
+        dest="image_format",
+        type=str,
+        default=None,
+        help="出力画像フォーマット (PNG / JPEG)",
+    )
+    parser.add_argument(
+        "--ocr-engine",
+        dest="ocr_engine",
+        type=str,
+        default=None,
+        choices=["claude", "local", "mock", "dummy"],
+        help="使用するOCRエンジン (デフォルト: settings.env の設定または local)",
+    )
+    parser.add_argument(
+        "--api-key",
+        dest="api_key",
+        type=str,
+        default=None,
+        help="Claude APIキー",
+    )
+    parser.add_argument(
+        "--model",
+        dest="model",
+        type=str,
+        default=None,
+        help="Claude Vision モデル名",
+    )
+    parser.add_argument(
+        "--template-dir",
+        dest="template_dir",
+        type=Path,
+        default=None,
+        help="テンプレート配置ディレクトリ",
+    )
+
+    args = parser.parse_args(argv)
+
+    print("==================================================")
+    print("【全処理通し実行 開始 (#1 -> #2 -> #3 -> #4 -> #5)】")
+    print(f"  対象地方公共団体コード県: {args.pref_code}")
+    print("==================================================")
+
+    # ステップ A: 連続実行取得 (#1, #2, #3)
+    ret_fetch = run_fetch_pipeline(
+        pref_code=args.pref_code,
+        output_dir=args.output_dir,
+        config_path=args.config_path,
+        env_file_path=args.env_file_path,
+        max_depth=args.max_depth,
+        sleep_sec=args.sleep_sec,
+        timeout=args.timeout,
+        dpi=args.dpi,
+        image_format=args.image_format,
+    )
+    if ret_fetch != 0:
+        print("\nエラー: 連続実行取得PG が失敗したため、後続の解析を中断します。", file=sys.stderr)
+        return ret_fetch
+
+    # ステップ B: 連続実行解析 (#4, #5)
+    valid_code = validate_pref_code(args.pref_code)
+    output_base = args.output_dir or resolve_output_dir(args.env_file_path)
+    target_dir = output_base / valid_code
+
+    ret_analyze = run_analyze_pipeline(
+        target_dir=target_dir,
+        engine_name=args.ocr_engine,
+        env_file_path=args.env_file_path,
+        api_key=args.api_key,
+        model=args.model,
+        template_dir=args.template_dir,
+    )
+
+    print("\n==================================================")
+    if ret_analyze == 0:
+        print("【全処理通し実行 正常終了】 全工程 (#1〜#5) が完了しました。")
+    else:
+        print("【全処理通し実行 一部エラー終了】 解析工程でエラーが検出されました。")
+    print("==================================================")
+
+    return ret_analyze
 
 
-def main(argv: list[str] | None = None) -> int | None:
+def main(argv: list[str] | None = None) -> int:
     """CLI entry point for transform_xml."""
     args = sys.argv[1:] if argv is None else argv
+
+    # 全処理通し実行 (--all / --full-pipeline / --pipeline / all / pipeline)
+    if args and args[0] in ("--all", "--full-pipeline", "--pipeline", "all", "pipeline"):
+        return run_full_pipeline(args[1:])
+
+    # 連続実行取得PGの実行 (--fetch-pipeline / --run-fetch / fetch-pipeline / run-fetch)
+    if args and args[0] in (
+        "--fetch-pipeline",
+        "--run-fetch",
+        "fetch-pipeline",
+        "run-fetch",
+    ):
+        from transform_xml.fetch_pipeline import main as fetch_pipeline_main
+
+        return fetch_pipeline_main(args[1:])
+
+    # 連続実行解析PGの実行 (--analyze-pipeline / --parse-pipeline / --run-analyze / --run-parse / analyze-pipeline / parse-pipeline)
+    if args and args[0] in (
+        "--analyze-pipeline",
+        "--parse-pipeline",
+        "--run-analyze",
+        "--run-parse",
+        "analyze-pipeline",
+        "parse-pipeline",
+    ):
+        from transform_xml.analyze_pipeline import main as analyze_pipeline_main
+
+        return analyze_pipeline_main(args[1:])
 
     # #5 XML部分統合PGの実行 (--integrate-xml / --merge-xml / integrate-xml / merge-xml)
     if args and args[0] in (
@@ -58,10 +229,7 @@ def main(argv: list[str] | None = None) -> int | None:
 
         return crawl_main(args[1:])
 
-    # デフォルト動作
-    message = hello_world()
-    print(message)
-    return None
+    return 0
 
    #1 サイト巡回をし、該当するURLを取得する『サイト巡回PG』
    #1-a 起動時条件で地方公共団体コード県(01～47と00:総務省)を指定する。00～47でない場合は起動条件不正として中断する

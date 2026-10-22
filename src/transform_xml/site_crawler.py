@@ -14,6 +14,18 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 
+# 直接スクリプト実行時にもパッケージパスを解決できるように追加
+_SRC_DIR = Path(__file__).resolve().parent.parent
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from transform_xml.config import (
+    find_env_file_in_argv,
+    resolve_env_float,
+    resolve_env_int,
+    resolve_env_path,
+)
+
 # 地方公共団体コード県の定義 (00: 総務省, 01〜47: 都道府県)
 VALID_PREF_CODES = {f"{i:02d}" for i in range(48)}
 
@@ -21,7 +33,7 @@ PDF_LINKS_FILE_NAME = "pdf_links.csv"
 DEFAULT_OUTPUT_DIR = r"C:\transfer-xml"
 DEFAULT_CONFIG_PATH = Path("config") / "site_crawler_config.json"
 MAX_CRAWL_DEPTH = 7
-DEFAULT_SLEEP_SEC = 0.5
+DEFAULT_SLEEP_SEC = 1.0
 
 
 @dataclass
@@ -428,11 +440,35 @@ def run_crawler(
     output_dir: Path | None = None,
     config_path: Path | None = None,
     env_file_path: Path | None = None,
-    max_depth: int = MAX_CRAWL_DEPTH,
-    sleep_sec: float = DEFAULT_SLEEP_SEC,
+    max_depth: int | None = None,
+    sleep_sec: float | None = None,
 ) -> int:
     """Run site crawler for the specified prefecture code (#1 サイト巡回PG)."""
     valid_code = validate_pref_code(pref_code)
+
+    if sleep_sec is None:
+        sleep_sec = resolve_env_float(
+            "CRAWLER_SLEEP_SEC",
+            "SLEEP_SEC",
+            env_file_path=env_file_path,
+            default=DEFAULT_SLEEP_SEC,
+        )
+    if max_depth is None:
+        max_depth = resolve_env_int(
+            "MAX_CRAWL_DEPTH",
+            "MAX_DEPTH",
+            env_file_path=env_file_path,
+            default=MAX_CRAWL_DEPTH,
+        )
+    if config_path is None:
+        resolved_config = resolve_env_path(
+            "CRAWLER_CONFIG_PATH",
+            "SITE_CRAWLER_CONFIG",
+            env_file_path=env_file_path,
+            default=DEFAULT_CONFIG_PATH,
+        )
+        if resolved_config.is_file():
+            config_path = resolved_config
 
     config = load_crawler_config(config_path)
     target = get_pref_target(valid_code, config)
@@ -488,6 +524,27 @@ def run_crawler(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for site crawler."""
+    env_file = find_env_file_in_argv(argv)
+    initial_sleep = resolve_env_float(
+        "CRAWLER_SLEEP_SEC",
+        "SLEEP_SEC",
+        env_file_path=env_file,
+        default=DEFAULT_SLEEP_SEC,
+    )
+    initial_max_depth = resolve_env_int(
+        "MAX_CRAWL_DEPTH",
+        "MAX_DEPTH",
+        env_file_path=env_file,
+        default=MAX_CRAWL_DEPTH,
+    )
+    initial_config = resolve_env_path(
+        "CRAWLER_CONFIG_PATH",
+        "SITE_CRAWLER_CONFIG",
+        env_file_path=env_file,
+        default=DEFAULT_CONFIG_PATH,
+    )
+    initial_output_dir = resolve_output_dir(env_file)
+
     parser = argparse.ArgumentParser(description="#1 サイト巡回PG")
     parser.add_argument(
         "pref_code",
@@ -497,8 +554,8 @@ def main(argv: list[str] | None = None) -> int:
         "--config",
         dest="config_path",
         type=Path,
-        default=None,
-        help="サイト巡回設定ファイルパス (デフォルト: config/site_crawler_config.json)",
+        default=initial_config,
+        help=f"サイト巡回設定ファイルパス (デフォルト: settings.env または {DEFAULT_CONFIG_PATH})",
     )
     parser.add_argument(
         "--env-file",
@@ -518,15 +575,15 @@ def main(argv: list[str] | None = None) -> int:
         "--max-depth",
         dest="max_depth",
         type=int,
-        default=MAX_CRAWL_DEPTH,
-        help="巡回階層上限 (デフォルト: 7)",
+        default=initial_max_depth,
+        help=f"巡回階層上限 (デフォルト: settings.env または {MAX_CRAWL_DEPTH})",
     )
     parser.add_argument(
         "--sleep",
         dest="sleep_sec",
         type=float,
-        default=DEFAULT_SLEEP_SEC,
-        help="アクセス間隔スリープ秒数 (デフォルト: 0.5)",
+        default=initial_sleep,
+        help=f"アクセス間隔スリープ秒数 (デフォルト: settings.env または {DEFAULT_SLEEP_SEC}秒)",
     )
 
     args = parser.parse_args(argv)
@@ -536,7 +593,7 @@ def main(argv: list[str] | None = None) -> int:
             pref_code=args.pref_code,
             output_dir=args.output_dir,
             config_path=args.config_path,
-            env_file_path=args.env_file_path,
+            env_file_path=args.env_file_path or env_file,
             max_depth=args.max_depth,
             sleep_sec=args.sleep_sec,
         )

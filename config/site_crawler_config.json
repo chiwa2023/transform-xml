@@ -1,4 +1,10 @@
 {
+  "22": {
+    "name": "静岡県",
+    "root_url": "https://www.pref.shizuoka.jp/kensei/senkyo/seijishikinshushi/index.html",
+    "start_key": "article",
+    "end_key": "/article"
+  },
   "24": {
     "name": "三重県",
     "root_url": "https://www.pref.mie.lg.jp/SENKAN/HP/0019100008_00004.htm",

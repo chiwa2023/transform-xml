@@ -12,6 +12,13 @@ import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# 直接スクリプト実行時にもパッケージパスを解決できるように追加
+_SRC_DIR = Path(__file__).resolve().parent.parent
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from transform_xml.config import find_env_file_in_argv, resolve_env_float
+
 PDF_LINKS_FILE_NAME = "pdf_links.csv"
 DEFAULT_SLEEP_SEC = 1.0
 DEFAULT_TIMEOUT = 15.0
@@ -129,21 +136,38 @@ def download_file(
 
 def download_pdfs_in_dir(
     target_dir: Path | str,
-    sleep_sec: float = DEFAULT_SLEEP_SEC,
-    timeout: float = DEFAULT_TIMEOUT,
+    sleep_sec: float | None = None,
+    timeout: float | None = None,
     user_agent: str = DEFAULT_USER_AGENT,
+    env_file_path: Path | str | None = None,
 ) -> DownloadResult:
     """Execute PDF download processing for target directory (#2 pdf取得PG).
 
     Args:
         target_dir: Target directory containing pdf_links.csv files.
-        sleep_sec: Sleep duration in seconds after each file download (default 1.0s).
-        timeout: Network request timeout in seconds.
+        sleep_sec: Sleep duration in seconds after each file download (defaults to settings.env or 1.0s).
+        timeout: Network request timeout in seconds (defaults to settings.env or 15.0s).
         user_agent: HTTP User-Agent header string.
+        env_file_path: Optional path to settings.env.
 
     Returns:
         DownloadResult containing operation summary.
     """
+    if sleep_sec is None:
+        sleep_sec = resolve_env_float(
+            "DOWNLOAD_SLEEP_SEC",
+            "SLEEP_SEC",
+            env_file_path=env_file_path,
+            default=DEFAULT_SLEEP_SEC,
+        )
+    if timeout is None:
+        timeout = resolve_env_float(
+            "TIMEOUT_SEC",
+            "REQUEST_TIMEOUT",
+            env_file_path=env_file_path,
+            default=DEFAULT_TIMEOUT,
+        )
+
     resolved_dir = Path(target_dir).resolve()
     if not resolved_dir.exists():
         raise FileNotFoundError(f"指定されたディレクトリが存在しません: {resolved_dir}")
@@ -218,6 +242,20 @@ def download_pdfs_in_dir(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for PDF downloader."""
+    env_file = find_env_file_in_argv(argv)
+    initial_sleep = resolve_env_float(
+        "DOWNLOAD_SLEEP_SEC",
+        "SLEEP_SEC",
+        env_file_path=env_file,
+        default=DEFAULT_SLEEP_SEC,
+    )
+    initial_timeout = resolve_env_float(
+        "TIMEOUT_SEC",
+        "REQUEST_TIMEOUT",
+        env_file_path=env_file,
+        default=DEFAULT_TIMEOUT,
+    )
+
     parser = argparse.ArgumentParser(description="#2 pdf取得PG")
     parser.add_argument(
         "target_dir",
@@ -228,15 +266,22 @@ def main(argv: list[str] | None = None) -> int:
         "--sleep",
         dest="sleep_sec",
         type=float,
-        default=DEFAULT_SLEEP_SEC,
-        help=f"保存作業完了後の待機秒数 (デフォルト: {DEFAULT_SLEEP_SEC}秒)",
+        default=initial_sleep,
+        help=f"保存作業完了後の待機秒数 (デフォルト: settings.env または {DEFAULT_SLEEP_SEC}秒)",
     )
     parser.add_argument(
         "--timeout",
         dest="timeout",
         type=float,
-        default=DEFAULT_TIMEOUT,
-        help=f"リクエストタイムアウト秒数 (デフォルト: {DEFAULT_TIMEOUT}秒)",
+        default=initial_timeout,
+        help=f"リクエストタイムアウト秒数 (デフォルト: settings.env または {DEFAULT_TIMEOUT}秒)",
+    )
+    parser.add_argument(
+        "--env-file",
+        dest="env_file_path",
+        type=Path,
+        default=None,
+        help="全体設定ファイルパス (デフォルト: config/settings.env または .env)",
     )
 
     args = parser.parse_args(argv)
