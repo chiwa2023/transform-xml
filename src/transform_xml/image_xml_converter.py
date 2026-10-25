@@ -23,6 +23,14 @@ IMAGE_CONVERT_JSON_NAME = "image_convert.json"
 XML_CONVERT_LOG_NAME = "xml_convert.log"
 XML_CONVERT_JSON_NAME = "xml_convert.json"
 DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
+DEFAULT_PROMPT_MD_NAME = "claude_vision_prompt.md"
+DEFAULT_INDATA_DIR_REL = Path("config") / "template" / "indata"
+
+# <ROW> タグ正規表現パターン (前後のインデント改行を含む)
+ROW_TAG_PATTERN = re.compile(
+    r"([ \t]*<ROW>.*?</ROW>[ \t]*\r?\n?)",
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 @dataclass
@@ -271,252 +279,203 @@ def extract_form_info_from_text(text: str) -> tuple[int | None, int | None]:
     return form_num, branch_num
 
 
-def get_xml_template(form_num: int | None, branch_num: int | None) -> str:
-    """Retrieve XML template skeleton for the given form and branch (#4-g).
+def resolve_template_dir(template_dir: Path | None = None) -> Path:
+    """Resolve directory containing indata XML templates (#4-e).
+
+    Searches in:
+    1. Specified template_dir (or its indata subdirectory if present)
+    2. config/template/indata
+    3. Project root config/template/indata
+    """
+    if template_dir and template_dir.exists():
+        if (template_dir / "indata").is_dir():
+            return (template_dir / "indata").resolve()
+        return template_dir.resolve()
+
+    candidates = [
+        DEFAULT_INDATA_DIR_REL,
+        Path(__file__).resolve().parent.parent.parent / "config" / "template" / "indata",
+        Path("config") / "template",
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c.resolve()
+
+    return DEFAULT_INDATA_DIR_REL.resolve()
+
+
+def resolve_indata_template_path(
+    form_num: int | None,
+    branch_num: int | None = None,
+    template_dir: Path | None = None,
+) -> tuple[Path | None, bool]:
+    """Resolve template file path and whether it is a row-expanding template (#4-e, #4-f~#4-h).
+
+    Args:
+        form_num: Form number (e.g. 1, 2, 6, 7, 15, 20).
+        branch_num: Branch number (e.g. 1, 2, 3, 8).
+        template_dir: Optional template directory.
+
+    Returns:
+        Tuple of (template_path: Path | None, is_row_template: bool).
+    """
+    if form_num is None:
+        return None, False
+
+    t_dir = resolve_template_dir(template_dir)
+    if not t_dir.is_dir():
+        return None, False
+
+    # 1. 枝番が存在する場合: {form:02d}_{branch:02d}_indata_row.xml / _indata.xml
+    if branch_num is not None:
+        cand_row = t_dir / f"{form_num:02d}_{branch_num:02d}_indata_row.xml"
+        if cand_row.is_file():
+            return cand_row, True
+        cand_norow = t_dir / f"{form_num:02d}_{branch_num:02d}_indata.xml"
+        if cand_norow.is_file():
+            return cand_norow, False
+
+    # 2. 枝番がない場合または一致なし: {form:02d}_indata_row.xml / _indata.xml
+    cand_row = t_dir / f"{form_num:02d}_indata_row.xml"
+    if cand_row.is_file():
+        return cand_row, True
+    cand_norow = t_dir / f"{form_num:02d}_indata.xml"
+    if cand_norow.is_file():
+        return cand_norow, False
+
+    # 3. 曖昧検索 (glob)
+    pattern = f"{form_num:02d}_*.xml"
+    matched = sorted(list(t_dir.glob(pattern)))
+    if matched:
+        chosen = matched[0]
+        return chosen, "_row" in chosen.name.lower()
+
+    return None, False
+
+
+def get_xml_template(
+    form_num: int | None,
+    branch_num: int | None = None,
+    template_dir: Path | None = None,
+) -> str:
+    """Retrieve XML template skeleton from config/template/indata (#4-e).
 
     Args:
         form_num: Form number (e.g., 1, 2, 6, 7, 13, 15, 17, 20).
         branch_num: Branch number (e.g., 1, 2, 3, 8).
+        template_dir: Optional template directory.
 
     Returns:
-        XML snippet string. If form_num is None, returns empty string.
+        XML snippet string. If form_num is None or template not found, returns fallback.
     """
     if form_num is None:
         return ""
 
-    if form_num == 1:
-        return (
-            "        <SYUUSHI07_01>\n"
-            "                <SHEET>\n"
-            "                        <HOUKOKU_NEN></HOUKOKU_NEN>\n"
-            "                        <KAISAI_DT></KAISAI_DT>\n"
-            "                        <DANTAI_NM></DANTAI_NM>\n"
-            "                        <DANTAI_KANA></DANTAI_KANA>\n"
-            "                        <JIM_ADR></JIM_ADR>\n"
-            "                        <JIM_APA_ADR></JIM_APA_ADR>\n"
-            "                        <DAI_NM1></DAI_NM1>\n"
-            "                        <DAI_NM2></DAI_NM2>\n"
-            "                        <KAI_NM1></KAI_NM1>\n"
-            "                        <KAI_NM2></KAI_NM2>\n"
-            "                        <TANTOU1_NM1></TANTOU1_NM1>\n"
-            "                        <TANTOU1_NM2></TANTOU1_NM2>\n"
-            "                        <TANTOU1_TEL></TANTOU1_TEL>\n"
-            "                        <TANTOU2_NM1></TANTOU2_NM1>\n"
-            "                        <TANTOU2_NM2></TANTOU2_NM2>\n"
-            "                        <TANTOU2_TEL></TANTOU2_TEL>\n"
-            "                        <TANTOU3_NM1></TANTOU3_NM1>\n"
-            "                        <TANTOU3_NM2></TANTOU3_NM2>\n"
-            "                        <TANTOU3_TEL></TANTOU3_TEL>\n"
-            "                        <DANTAI_KBN></DANTAI_KBN>\n"
-            "                        <KATU_KUKI></KATU_KUKI>\n"
-            "                        <SIKIN_UMU></SIKIN_UMU>\n"
-            "                        <KOSYOKU_NM></KOSYOKU_NM>\n"
-            "                        <KOSYOKU_KBN></KOSYOKU_KBN>\n"
-            "                        <SIKIN_TODOKE_NM1></SIKIN_TODOKE_NM1>\n"
-            "                        <SIKIN_TODOKE_NM2></SIKIN_TODOKE_NM2>\n"
-            "                        <SIKIN_KIKAN1></SIKIN_KIKAN1>\n"
-            "                        <SIKIN_KIKAN2></SIKIN_KIKAN2>\n"
-            "                        <SIKIN_KIKAN_FUKUSU></SIKIN_KIKAN_FUKUSU>\n"
-            "                        <GIIN_DANTAI_KBN></GIIN_DANTAI_KBN>\n"
-            "                        <GIIN1_KOSYOKU_NM_1></GIIN1_KOSYOKU_NM_1>\n"
-            "                        <GIIN1_KOSYOKU_NM_2></GIIN1_KOSYOKU_NM_2>\n"
-            "                        <GIIN1_KOSYOKU_NM></GIIN1_KOSYOKU_NM>\n"
-            "                        <GIIN1_KOSYOKU_KBN></GIIN1_KOSYOKU_KBN>\n"
-            "                        <GIIN_KIKAN1></GIIN_KIKAN1>\n"
-            "                        <GIIN_KIKAN2></GIIN_KIKAN2>\n"
-            "                        <GIIN_KIKAN_FUKUSU></GIIN_KIKAN_FUKUSU>\n"
-            "                        <GIIN2_KOSYOKU_NM_1></GIIN2_KOSYOKU_NM_1>\n"
-            "                        <GIIN2_KOSYOKU_NM_2></GIIN2_KOSYOKU_NM_2>\n"
-            "                        <GIIN2_KOSYOKU_NM></GIIN2_KOSYOKU_NM>\n"
-            "                        <GIIN2_KOSYOKU_KBN></GIIN2_KOSYOKU_KBN>\n"
-            "                        <GIIN3_KOSYOKU_NM_1></GIIN3_KOSYOKU_NM_1>\n"
-            "                        <GIIN3_KOSYOKU_NM_2></GIIN3_KOSYOKU_NM_2>\n"
-            "                        <GIIN3_KOSYOKU_NM></GIIN3_KOSYOKU_NM>\n"
-            "                        <GIIN3_KOSYOKU_KBN></GIIN3_KOSYOKU_KBN>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_01>\n"
-        )
+    t_path, _ = resolve_indata_template_path(
+        form_num, branch_num, template_dir=template_dir
+    )
+    if t_path and t_path.is_file():
+        return t_path.read_text(encoding="utf-8")
 
-    if form_num == 2:
-        return (
-            "        <SYUUSHI07_02>\n"
-            "                <SHEET>\n"
-            "                        <SYUNYU_SGK></SYUNYU_SGK>\n"
-            "                        <ZENNEN_KKS_GK></ZENNEN_KKS_GK>\n"
-            "                        <HONNEN_SYUNYU_GK></HONNEN_SYUNYU_GK>\n"
-            "                        <SISYUTU_SGK></SISYUTU_SGK>\n"
-            "                        <YOKUNEN_KKS_GK></YOKUNEN_KKS_GK>\n"
-            "                        <KOJIN_FUTAN_KGK></KOJIN_FUTAN_KGK>\n"
-            "                        <KOJIN_FUTAN_SU></KOJIN_FUTAN_SU>\n"
-            "                        <KOJIN_KIFU_GK></KOJIN_KIFU_GK>\n"
-            "                        <KOJIN_KIFU_BIKOU></KOJIN_KIFU_BIKOU>\n"
-            "                        <TOKUTEI_KIFU_GK></TOKUTEI_KIFU_GK>\n"
-            "                        <TOKUTEI_KIFU_BIKOU></TOKUTEI_KIFU_BIKOU>\n"
-            "                        <HOJIN_KIFU_GK></HOJIN_KIFU_GK>\n"
-            "                        <HOJIN_KIFU_BIKOU></HOJIN_KIFU_BIKOU>\n"
-            "                        <SEIJI_KIFU_GK></SEIJI_KIFU_GK>\n"
-            "                        <SEIJI_KIFU_BIKOU></SEIJI_KIFU_BIKOU>\n"
-            "                        <KIFU_SKEI_GK></KIFU_SKEI_GK>\n"
-            "                        <KIFU_SKEI_BIKOU></KIFU_SKEI_BIKOU>\n"
-            "                        <ATUSEN_GK></ATUSEN_GK>\n"
-            "                        <ATUSEN_BIKOU></ATUSEN_BIKOU>\n"
-            "                        <TOKUMEI_KIFU_GK></TOKUMEI_KIFU_GK>\n"
-            "                        <TOKUMEI_KIFU_BIKOU></TOKUMEI_KIFU_BIKOU>\n"
-            "                        <KIFU_GKEI_GK></KIFU_GKEI_GK>\n"
-            "                        <KIFU_GKEI_BIKOU></KIFU_GKEI_BIKOU>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_02>\n"
-        )
-
-    if form_num == 6:
-        return (
-            "        <SYUUSHI07_06>\n"
-            "                <SHEET>\n"
-            "                        <KINGAKU_GK></KINGAKU_GK>\n"
-            "                        <MIMAN_GK></MIMAN_GK>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_06>\n"
-        )
-
-    if form_num == 7:
-        k_tag = f"KUBUN{branch_num if branch_num else 1}"
-        return (
-            f"                <{k_tag}>\n"
-            "                        <SHEET>\n"
-            "                                <KINGAKU_GK></KINGAKU_GK>\n"
-            "                                <SONOTA_GK></SONOTA_GK>\n"
-            "                        </SHEET>\n"
-            f"                </{k_tag}>\n"
-        )
-
-    if form_num == 13:
-        return (
-            "        <SYUUSHI07_13>\n"
-            "                <SHEET>\n"
-            "                        <JINKENHI_GK></JINKENHI_GK>\n"
-            "                        <JINKENHI_KOUFU></JINKENHI_KOUFU>\n"
-            "                        <JINKENHI_BIKOU></JINKENHI_BIKOU>\n"
-            "                        <KOUNETU_GK></KOUNETU_GK>\n"
-            "                        <KOUNETU_KOUFU></KOUNETU_KOUFU>\n"
-            "                        <KOUNETU_BIKOU></KOUNETU_BIKOU>\n"
-            "                        <BIHIN_GK></BIHIN_GK>\n"
-            "                        <BIHIN_KOUFU></BIHIN_KOUFU>\n"
-            "                        <BIHIN_BIKOU></BIHIN_BIKOU>\n"
-            "                        <JIMUSYO_GK></JIMUSYO_GK>\n"
-            "                        <JIMUSYO_KOUFU></JIMUSYO_KOUFU>\n"
-            "                        <JIMUSYO_BIKOU></JIMUSYO_BIKOU>\n"
-            "                        <KEIHI_SKEI_GK></KEIHI_SKEI_GK>\n"
-            "                        <KEIHI_SKEI_KOUFU></KEIHI_SKEI_KOUFU>\n"
-            "                        <KEIHI_SKEI_BIKOU></KEIHI_SKEI_BIKOU>\n"
-            "                        <SOSIKI_GK></SOSIKI_GK>\n"
-            "                        <SOSIKI_KOUFU></SOSIKI_KOUFU>\n"
-            "                        <SOSIKI_BIKOU></SOSIKI_BIKOU>\n"
-            "                        <SENKYO_GK></SENKYO_GK>\n"
-            "                        <SENKYO_KOUFU></SENKYO_KOUFU>\n"
-            "                        <SENKYO_BIKOU></SENKYO_BIKOU>\n"
-            "                        <SONOTA_JIGYO_GK></SONOTA_JIGYO_GK>\n"
-            "                        <SONOTA_JIGYO_KOUFU></SONOTA_JIGYO_KOUFU>\n"
-            "                        <SONOTA_JIGYO_BIKOU></SONOTA_JIGYO_BIKOU>\n"
-            "                        <HAKKOU_JIGYO_GK></HAKKOU_JIGYO_GK>\n"
-            "                        <HAKKOU_JIGYO_KOUFU></HAKKOU_JIGYO_KOUFU>\n"
-            "                        <HAKKOU_JIGYO_BIKOU></HAKKOU_JIGYO_BIKOU>\n"
-            "                        <SENDEN_GK></SENDEN_GK>\n"
-            "                        <SENDEN_KOUFU></SENDEN_KOUFU>\n"
-            "                        <SENDEN_BIKOU></SENDEN_BIKOU>\n"
-            "                        <KAISAI_GK></KAISAI_GK>\n"
-            "                        <KAISAI_KOUFU></KAISAI_KOUFU>\n"
-            "                        <KAISAI_BIKOU></KAISAI_BIKOU>\n"
-            "                        <SONOTA_GK></SONOTA_GK>\n"
-            "                        <SONOTA_KOUFU></SONOTA_KOUFU>\n"
-            "                        <SONOTA_BIKOU></SONOTA_BIKOU>\n"
-            "                        <CYOUSA_GK></CYOUSA_GK>\n"
-            "                        <CYOUSA_KOUFU></CYOUSA_KOUFU>\n"
-            "                        <CYOUSA_BIKOU></CYOUSA_BIKOU>\n"
-            "                        <KIFU_GK></KIFU_GK>\n"
-            "                        <KIFU_KOUFU></KIFU_KOUFU>\n"
-            "                        <KIFU_BIKOU></KIFU_BIKOU>\n"
-            "                        <SONOTA_KEIHI_GK></SONOTA_KEIHI_GK>\n"
-            "                        <SONOTA_KEIHI_KOUFU></SONOTA_KEIHI_KOUFU>\n"
-            "                        <SONOTA_KEIHI_BIKOU></SONOTA_KEIHI_BIKOU>\n"
-            "                        <KATUDOU_SKEI_GK></KATUDOU_SKEI_GK>\n"
-            "                        <KATUDOU_SKEI_KOUFU></KATUDOU_SKEI_KOUFU>\n"
-            "                        <KATUDOU_SKEI_BIKOU></KATUDOU_SKEI_BIKOU>\n"
-            "                        <GKEI_GK></GKEI_GK>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_13>\n"
-        )
-
-    if form_num == 15:
-        if branch_num == 8:
-            return (
-                "                <KUBUN8>\n"
-                "                        <SHEET>\n"
-                "                                <HIMOKU></HIMOKU>\n"
-                "                                <KINGAKU_GK></KINGAKU_GK>\n"
-                "                                <SONOTA_GK></SONOTA_GK>\n"
-                "                        </SHEET>\n"
-                "                </KUBUN8>\n"
-            )
-        return (
-            "                        <SHEET>\n"
-            "                                <HIMOKU></HIMOKU>\n"
-            "                                <KINGAKU_GK></KINGAKU_GK>\n"
-            "                                <SONOTA_GK></SONOTA_GK>\n"
-            "                        </SHEET>\n"
-        )
-
-    if form_num == 17:
-        return (
-            "        <SYUUSHI07_17>\n"
-            "                <SHEET>\n"
-            "                        <TOCHI_UMU></TOCHI_UMU>\n"
-            "                        <TOCHI_BIKOU></TOCHI_BIKOU>\n"
-            "                        <TATEMONO_UMU></TATEMONO_UMU>\n"
-            "                        <TATEMONO_BIKOU></TATEMONO_BIKOU>\n"
-            "                        <SYAKUCHI_UMU></SYAKUCHI_UMU>\n"
-            "                        <SYAKUCHI_BIKOU></SYAKUCHI_BIKOU>\n"
-            "                        <DOUSAN_UMU></DOUSAN_UMU>\n"
-            "                        <DOUSAN_BIKOU></DOUSAN_BIKOU>\n"
-            "                        <YOKIN_UMU></YOKIN_UMU>\n"
-            "                        <YOKIN_BIKOU></YOKIN_BIKOU>\n"
-            "                        <SINTAKU_UMU></SINTAKU_UMU>\n"
-            "                        <SINTAKU_BIKOU></SINTAKU_BIKOU>\n"
-            "                        <SYOUKEN_UMU></SYOUKEN_UMU>\n"
-            "                        <SYOUKEN_BIKOU></SYOUKEN_BIKOU>\n"
-            "                        <SYUSSI_UMU></SYUSSI_UMU>\n"
-            "                        <SYUSSI_BIKOU></SYUSSI_BIKOU>\n"
-            "                        <KASITUKE_UMU></KASITUKE_UMU>\n"
-            "                        <KASITUKE_BIKOU></KASITUKE_BIKOU>\n"
-            "                        <SIKIKIN_UMU></SIKIKIN_UMU>\n"
-            "                        <SIKIKIN_BIKOU></SIKIKIN_BIKOU>\n"
-            "                        <SISETURIYOU_UMU></SISETURIYOU_UMU>\n"
-            "                        <SISETURIYOU_BIKOU></SISETURIYOU_BIKOU>\n"
-            "                        <KARIIRE_UMU></KARIIRE_UMU>\n"
-            "                        <KARIIRE_BIKOU></KARIIRE_BIKOU>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_17>\n"
-        )
-
-    if form_num == 20:
-        return (
-            "        <SYUUSHI07_20>\n"
-            "                <SHEET>\n"
-            "                        <RYOUSYU_UMU></RYOUSYU_UMU>\n"
-            "                        <KANSA_IKEN_UMU></KANSA_IKEN_UMU>\n"
-            "                        <KANSA_HOUKOKU_UMU></KANSA_HOUKOKU_UMU>\n"
-            "                        <SENSEI_DT></SENSEI_DT>\n"
-            "                        <DANTAI_NM></DANTAI_NM>\n"
-            "                        <KAI_NM1></KAI_NM1>\n"
-            "                        <KAI_NM2></KAI_NM2>\n"
-            "                        <DAI_NM1></DAI_NM1>\n"
-            "                        <DAI_NM2></DAI_NM2>\n"
-            "                </SHEET>\n"
-            "        </SYUUSHI07_20>\n"
-        )
-
-    # 汎用様式
+    # テンプレートファイルが見つからない場合の最小限フォールバック
     tag = f"SYUUSHI07_{form_num:02d}"
     return f"        <{tag}>\n                <SHEET>\n                </SHEET>\n        </{tag}>\n"
+
+
+def build_xml_from_template(
+    template_content: str,
+    is_row_template: bool,
+    rows: list[dict[str, str]] | None = None,
+    sheet_values: dict[str, str] | None = None,
+) -> str:
+    """Build partial XML by expanding or removing <ROW> tags and filling values (#4-f, #4-g, #4-h).
+
+    Args:
+        template_content: Raw template XML string loaded from indata.
+        is_row_template: True if the template filename contains '_row'.
+        rows: List of dicts where each dict contains row tag-value mappings.
+        sheet_values: Dict of non-row sheet tag-value mappings (e.g. HIMOKU, KINGAKU_GK).
+
+    Returns:
+        Processed XML snippet string.
+    """
+    if not template_content:
+        return ""
+
+    result_xml = template_content
+
+    # 表形式テンプレート（ファイル名に _row が含まれる場合）の行増減処理 (#4-f, #4-g)
+    if is_row_template:
+        if not rows:
+            # #4-g: 表に行の記載がないと認識した場合は、<ROW>〜</ROW> タグを削除
+            result_xml = ROW_TAG_PATTERN.sub("", result_xml)
+        else:
+            # #4-f: 表に複数行の記載があると認識した場合は、<ROW>〜</ROW> を複製
+            m = ROW_TAG_PATTERN.search(result_xml)
+            if m:
+                row_skeleton = m.group(1)
+                expanded_rows: list[str] = []
+
+                for r_data in rows:
+                    curr_row = row_skeleton
+                    for k, v in r_data.items():
+                        # タグ内の値を置換 (<TAG>...</TAG> -> <TAG>v</TAG>)
+                        curr_row = re.sub(
+                            rf"<{k}>.*?</{k}>",
+                            f"<{k}>{v}</{k}>",
+                            curr_row,
+                            flags=re.IGNORECASE,
+                        )
+                    expanded_rows.append(curr_row)
+
+                # 元の <ROW> 箇所を複数行の連結内容で置換
+                joined_rows = "".join(expanded_rows)
+                result_xml = ROW_TAG_PATTERN.sub(joined_rows, result_xml, count=1)
+    # #4-h: ファイル名に _row が含まれないテンプレートは、前述のようなタグの増減は一切ない
+
+    # シート直下の非行タグ（HIMOKU, KINGAKU_GK, SONOTA_GK, 団体情報など）の埋め込み
+    if sheet_values:
+        for k, v in sheet_values.items():
+            result_xml = re.sub(
+                rf"<{k}>.*?</{k}>",
+                f"<{k}>{v}</{k}>",
+                result_xml,
+                flags=re.IGNORECASE,
+            )
+
+    return result_xml
+
+
+def load_claude_prompt(prompt_path: Path | None = None) -> str:
+    """Load Claude vision prompt from external markdown file (#4-i).
+
+    Args:
+        prompt_path: Path to markdown prompt file. If None, checks default candidate paths.
+
+    Returns:
+        Prompt markdown string.
+    """
+    if prompt_path and prompt_path.is_file():
+        return prompt_path.read_text(encoding="utf-8")
+
+    candidates = [
+        Path("config") / DEFAULT_PROMPT_MD_NAME,
+        Path(__file__).resolve().parent.parent.parent / "config" / DEFAULT_PROMPT_MD_NAME,
+    ]
+    for c in candidates:
+        if c.is_file():
+            return c.read_text(encoding="utf-8")
+
+    # フォールバック
+    return (
+        "この画像は日本の政治資金収支報告書の1ページです。\n"
+        "1. 画像内の様式番号（その1〜その20）と枝番を特定してください。\n"
+        "2. 監査意見書など「その〜」が存在しないページは様式番号を null としてください。\n"
+        "3. 総務省政治資金収支報告書ソフトウェア互換の部分XMLを抽出・生成してください。\n"
+        "4. 表形式（_row）で行がある場合は<ROW>を複製し、行がない場合は<ROW>を削除してください。\n"
+        "回答は以下のJSON形式のみを出力してください:\n"
+        '{"form_number": <int または null>, "branch_number": <int または null>, "xml": "<生成されたXML文字列>"}'
+    )
 
 
 class BaseOcrEngine:
@@ -539,7 +498,7 @@ class BaseOcrEngine:
 
 
 class ClaudeOcrEngine(BaseOcrEngine):
-    """OCR engine using Anthropic Claude Vision API (#4-d, #4-e)."""
+    """OCR engine using Anthropic Claude Vision API (#4-d, #4-e, #4-i, #4-j)."""
 
     def __init__(
         self,
@@ -547,11 +506,18 @@ class ClaudeOcrEngine(BaseOcrEngine):
         model: str = DEFAULT_CLAUDE_MODEL,
         api_url: str = "https://api.anthropic.com/v1/messages",
         timeout: float = 60.0,
+        prompt_path: Path | None = None,
+        template_dir: Path | None = None,
+        enable_prompt_caching: bool = True,
     ) -> None:
         self.api_key = api_key
         self.model = model
         self.api_url = api_url
         self.timeout = timeout
+        self.prompt_path = prompt_path
+        self.template_dir = template_dir
+        self.enable_prompt_caching = enable_prompt_caching
+        self.prompt_text = load_claude_prompt(prompt_path)
 
     def process_image(
         self,
@@ -571,19 +537,34 @@ class ClaudeOcrEngine(BaseOcrEngine):
 
             img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
-            prompt = (
-                "この画像は日本の政治資金収支報告書の1ページです。\n"
-                "1. 画像内の様式番号（例: その1、その2、その6、その7、その13、その15、その17、その20）と、"
-                "枝番（その7の法人/政治団体/個人、その15の組織活動費/寄付交付金など）を特定してください。\n"
-                "2. 監査意見書など「その～」が存在しないページ、または対象外ページの場合は様式番号を null としてください。\n"
-                "3. 総務省政治資金収支報告書ソフトウェア互換の部分XML（例: <SYUUSHI07_01>... または <SHEET>... または <KUBUN2>...）を抽出・生成してください。\n"
-                "回答は以下のJSON形式のみを出力してください。Markdownバッククォート(```json等)は付けず純粋なJSONで返してください:\n"
-                '{"form_number": <int または null>, "branch_number": <int または null>, "xml": "<生成されたXML文字列>"}'
-            )
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+            }
+
+            # Prompt Caching の有効化 (#4-j)
+            if self.enable_prompt_caching:
+                headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+                system_blocks = [
+                    {
+                        "type": "text",
+                        "text": self.prompt_text,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                system_blocks = [
+                    {
+                        "type": "text",
+                        "text": self.prompt_text,
+                    }
+                ]
 
             request_data = {
                 "model": self.model,
                 "max_tokens": 4096,
+                "system": system_blocks,
                 "messages": [
                     {
                         "role": "user",
@@ -598,7 +579,7 @@ class ClaudeOcrEngine(BaseOcrEngine):
                             },
                             {
                                 "type": "text",
-                                "text": prompt,
+                                "text": "添付された画像を解析し、指示書に従ってJSONを出力してください。",
                             },
                         ],
                     }
@@ -608,11 +589,7 @@ class ClaudeOcrEngine(BaseOcrEngine):
             req = urllib.request.Request(
                 self.api_url,
                 data=json.dumps(request_data).encode("utf-8"),
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": self.api_key,
-                    "anthropic-version": "2023-06-01",
-                },
+                headers=headers,
                 method="POST",
             )
 
@@ -637,7 +614,7 @@ class ClaudeOcrEngine(BaseOcrEngine):
 
             # XMLが空で様式番号がある場合はテンプレートをフォールバック
             if not xml_str and form_num is not None:
-                xml_str = get_xml_template(form_num, branch_num)
+                xml_str = get_xml_template(form_num, branch_num, template_dir=self.template_dir)
 
             return form_num, branch_num, xml_str, None
 
@@ -646,10 +623,11 @@ class ClaudeOcrEngine(BaseOcrEngine):
 
 
 class LocalOcrEngine(BaseOcrEngine):
-    """Local non-AI OCR engine using pytesseract if available, or safe fallback (#4-d)."""
+    """Local non-AI OCR engine using pytesseract if available, or safe fallback (#4-d, #4-e, #4-g)."""
 
-    def __init__(self, lang: str = "jpn") -> None:
+    def __init__(self, lang: str = "jpn", template_dir: Path | None = None) -> None:
         self.lang = lang
+        self.template_dir = template_dir
         self._tesseract_available: bool | None = None
 
     def _check_tesseract(self) -> bool:
@@ -683,7 +661,19 @@ class LocalOcrEngine(BaseOcrEngine):
                 text = pytesseract.image_to_string(img, lang=self.lang)
 
             form_num, branch_num = extract_form_info_from_text(text)
-            xml_content = get_xml_template(form_num, branch_num)
+            if form_num is None:
+                return None, None, "", None
+
+            t_path, is_row = resolve_indata_template_path(
+                form_num, branch_num, template_dir=self.template_dir
+            )
+            raw_tpl = get_xml_template(form_num, branch_num, template_dir=self.template_dir)
+            if is_row:
+                # 表に行の記載がないとみなして <ROW> タグを削除 (#4-g)
+                xml_content = build_xml_from_template(raw_tpl, is_row_template=True, rows=None)
+            else:
+                xml_content = raw_tpl
+
             return form_num, branch_num, xml_content, None
         except Exception as e:
             return None, None, "", str(e)
@@ -697,10 +687,12 @@ class MockOcrEngine(BaseOcrEngine):
         default_form_num: int | None = None,
         default_branch_num: int | None = None,
         custom_mapping: dict[str, tuple[int | None, int | None, str]] | None = None,
+        template_dir: Path | None = None,
     ) -> None:
         self.default_form_num = default_form_num
         self.default_branch_num = default_branch_num
         self.custom_mapping = custom_mapping or {}
+        self.template_dir = template_dir
 
     def process_image(
         self,
@@ -713,7 +705,11 @@ class MockOcrEngine(BaseOcrEngine):
             return form_num, branch_num, xml_content, None
 
         if self.default_form_num is not None:
-            xml_content = get_xml_template(self.default_form_num, self.default_branch_num)
+            xml_content = get_xml_template(
+                self.default_form_num,
+                self.default_branch_num,
+                template_dir=self.template_dir,
+            )
             return self.default_form_num, self.default_branch_num, xml_content, None
 
         # 監査意見書や末尾などの簡易ルール
@@ -725,6 +721,8 @@ def get_ocr_engine(
     env_file_path: Path | None = None,
     api_key: str | None = None,
     model: str | None = None,
+    prompt_path: Path | None = None,
+    template_dir: Path | None = None,
 ) -> BaseOcrEngine:
     """Factory to create the appropriate OCR engine based on settings (#4-d, #4-e).
 
@@ -733,6 +731,8 @@ def get_ocr_engine(
         env_file_path: Optional path to settings.env.
         api_key: Direct Claude API key if provided.
         model: Direct Claude model name if provided.
+        prompt_path: Optional path to markdown prompt file.
+        template_dir: Optional path to template directory.
 
     Returns:
         BaseOcrEngine instance.
@@ -750,9 +750,14 @@ def get_ocr_engine(
     )
 
     if resolved_engine in ("claude", "ai") or (not resolved_engine and resolved_api_key):
-        return ClaudeOcrEngine(api_key=resolved_api_key, model=resolved_model)
+        return ClaudeOcrEngine(
+            api_key=resolved_api_key,
+            model=resolved_model,
+            prompt_path=prompt_path,
+            template_dir=template_dir,
+        )
 
-    return LocalOcrEngine()
+    return LocalOcrEngine(template_dir=template_dir)
 
 
 def write_xml_conversion_logs(
@@ -944,6 +949,8 @@ def convert_xmls_in_target_dir(
     env_file_path: Path | None = None,
     api_key: str | None = None,
     model: str | None = None,
+    prompt_path: Path | None = None,
+    template_dir: Path | None = None,
 ) -> BatchXmlConversionResult:
     """Execute XML partial conversion for target directory (#4 画像XML部分変換PG).
 
@@ -954,6 +961,8 @@ def convert_xmls_in_target_dir(
         env_file_path: Path to settings.env.
         api_key: Claude API key.
         model: Claude model name.
+        prompt_path: Optional path to external markdown prompt file.
+        template_dir: Optional path to template directory.
 
     Returns:
         BatchXmlConversionResult containing operation summary.
@@ -970,6 +979,8 @@ def convert_xmls_in_target_dir(
         env_file_path=env_file_path,
         api_key=api_key,
         model=model,
+        prompt_path=prompt_path,
+        template_dir=template_dir,
     )
 
     print("==================================================")
@@ -1077,6 +1088,20 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=f"Claude Vision モデル名 (デフォルト: {DEFAULT_CLAUDE_MODEL})",
     )
+    parser.add_argument(
+        "--prompt-path",
+        dest="prompt_path",
+        type=Path,
+        default=None,
+        help="Claude Vision プロンプトMarkdownファイルパス",
+    )
+    parser.add_argument(
+        "--template-dir",
+        dest="template_dir",
+        type=Path,
+        default=None,
+        help="テンプレート配置ディレクトリ (デフォルト: config/template/indata)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -1087,6 +1112,8 @@ def main(argv: list[str] | None = None) -> int:
             env_file_path=args.env_file_path,
             api_key=args.api_key,
             model=args.model,
+            prompt_path=args.prompt_path,
+            template_dir=args.template_dir,
         )
         return 1 if result.errors or result.failed_dirs_count > 0 else 0
     except (FileNotFoundError, NotADirectoryError, ValueError) as e:

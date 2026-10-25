@@ -14,7 +14,6 @@ from unittest.mock import MagicMock, patch
 _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
-
 from transform_xml.image_xml_converter import (
     IMAGE_CONVERT_JSON_NAME,
     IMAGE_CONVERT_LOG_NAME,
@@ -26,6 +25,7 @@ from transform_xml.image_xml_converter import (
     LocalOcrEngine,
     MockOcrEngine,
     PageXmlRecord,
+    build_xml_from_template,
     convert_images_in_dir,
     convert_xmls_in_target_dir,
     extract_form_info_from_text,
@@ -33,7 +33,10 @@ from transform_xml.image_xml_converter import (
     find_xml_convert_targets,
     get_ocr_engine,
     get_xml_template,
+    load_claude_prompt,
     main,
+    resolve_indata_template_path,
+    resolve_template_dir,
     write_xml_conversion_logs,
 )
 
@@ -417,6 +420,84 @@ class TestImageXmlConverter(unittest.TestCase):
         self.assertIn("pytesseract がインストールされていません", err)
         self.assertEqual(xml_text, "")
 
+    def test_resolve_indata_templates(self):
+        """Test resolving indata template files (#4-e)."""
+        # 様式1 (枝番なし) -> 01_indata.xml (is_row=False)
+        p1, is_row1 = resolve_indata_template_path(1, None)
+        self.assertIsNotNone(p1)
+        self.assertTrue(p1.is_file())
+        self.assertEqual(p1.name, "01_indata.xml")
+        self.assertFalse(is_row1)
+
+        # 様式8, 枝番3 -> 08_03_indata_row.xml (is_row=True)
+        p8_3, is_row8_3 = resolve_indata_template_path(8, 3)
+        self.assertIsNotNone(p8_3)
+        self.assertTrue(p8_3.is_file())
+        self.assertEqual(p8_3.name, "08_03_indata_row.xml")
+        self.assertTrue(is_row8_3)
+
+        # 様式7, 枝番2 -> 07_02_indata_row.xml (is_row=True)
+        p7_2, is_row7_2 = resolve_indata_template_path(7, 2)
+        self.assertIsNotNone(p7_2)
+        self.assertEqual(p7_2.name, "07_02_indata_row.xml")
+        self.assertTrue(is_row7_2)
+
+        # 全49テンプレートが存在することの確認
+        indata_dir = resolve_template_dir()
+        xml_files = list(indata_dir.glob("*.xml"))
+        self.assertEqual(len(xml_files), 49)
+
+    def test_build_xml_from_template_row_operations(self):
+        """Test <ROW> tag expansion, deletion, and non-modification (#4-f, #4-g, #4-h)."""
+        # 1. #4-f: _row テンプレートで複数行ある場合は <ROW> を複製
+        tpl_07_03 = get_xml_template(7, 3)
+        rows_data = [
+            {"ICHIREN_NO": "1", "KIFUSYA_NM": "団体A", "KINGAKU": "100000"},
+            {"ICHIREN_NO": "2", "KIFUSYA_NM": "団体B", "KINGAKU": "200000"},
+        ]
+        xml_expanded = build_xml_from_template(
+            tpl_07_03,
+            is_row_template=True,
+            rows=rows_data,
+            sheet_values={"KINGAKU_GK": "300000"},
+        )
+        self.assertEqual(xml_expanded.count("<ROW>"), 2)
+        self.assertEqual(xml_expanded.count("</ROW>"), 2)
+        self.assertIn("<KIFUSYA_NM>団体A</KIFUSYA_NM>", xml_expanded)
+        self.assertIn("<KIFUSYA_NM>団体B</KIFUSYA_NM>", xml_expanded)
+        self.assertIn("<KINGAKU_GK>300000</KINGAKU_GK>", xml_expanded)
+
+        # 2. #4-g: _row テンプレートで行がない場合は <ROW> を削除
+        tpl_15_01 = get_xml_template(15, 1)
+        xml_deleted = build_xml_from_template(
+            tpl_15_01,
+            is_row_template=True,
+            rows=None,
+            sheet_values={"HIMOKU": "組織対策費", "KINGAKU_GK": "2198570", "SONOTA_GK": "2198570"},
+        )
+        self.assertNotIn("<ROW>", xml_deleted)
+        self.assertNotIn("</ROW>", xml_deleted)
+        self.assertIn("<HIMOKU>組織対策費</HIMOKU>", xml_deleted)
+        self.assertIn("<KINGAKU_GK>2198570</KINGAKU_GK>", xml_deleted)
+
+        # 3. #4-h: _row が含まれないテンプレート (01_indata.xml) はタグ増減なし
+        tpl_01 = get_xml_template(1, None)
+        xml_norow = build_xml_from_template(
+            tpl_01,
+            is_row_template=False,
+            rows=rows_data,  # rowsを渡しても無視される
+            sheet_values={"DANTAI_NM": "テスト政治団体"},
+        )
+        self.assertNotIn("<ROW>", xml_norow)
+        self.assertIn("<DANTAI_NM>テスト政治団体</DANTAI_NM>", xml_norow)
+
+    def test_load_claude_prompt(self):
+        """Test loading Claude prompt from external markdown file (#4-i)."""
+        prompt_txt = load_claude_prompt()
+        self.assertIn("政治資金収支報告書 OCR画像解析指示書", prompt_txt)
+        self.assertIn("様式番号および様式枝番の特定", prompt_txt)
+        self.assertIn("form_number", prompt_txt)
+
     def test_main_cli_mock(self):
         """Test CLI main invocation."""
         with patch("transform_xml.image_xml_converter.convert_xmls_in_target_dir") as mock_convert:
@@ -435,6 +516,8 @@ class TestImageXmlConverter(unittest.TestCase):
                 env_file_path=None,
                 api_key=None,
                 model=None,
+                prompt_path=None,
+                template_dir=None,
             )
 
     def test_main_cli_non_existent_dir(self):
@@ -444,6 +527,39 @@ class TestImageXmlConverter(unittest.TestCase):
             exit_code = main([str(self.temp_path / "non_existent")])
         self.assertEqual(exit_code, 1)
         self.assertIn("エラー:", captured_err.getvalue())
+
+    def test_real_ocr_tmp_ans_accuracy(self):
+        """Test real OCR output against tmp_ans final solution (#4-e101~#4-e113, 処理4修正d).
+
+        Note (# 処理4修正d):
+        現時点で最終解が出ているため、OCRが完全な場合はテストOKとなり、不完全な時は落ちるテスト。
+        (ただしOCRは完全でないので落ちて実装完了でよい)
+        """
+        src_fixture = FIXTURES_26_DIR / "tmp"
+        if not src_fixture.is_dir():
+            self.skipTest(f"Fixture not found: {src_fixture}")
+
+        work_dir = self.temp_path / "real_ocr_test"
+        shutil.copytree(src_fixture, work_dir)
+
+        # 実際のローカルOCRエンジンを使用して画像から変換
+        engine = LocalOcrEngine()
+        convert_xmls_in_target_dir(work_dir, ocr_engine=engine)
+
+        sub_dir = work_dir / "2022年ホリエモン新党"
+        # 0001〜0012 について tmp_ans 正解ファイルと完全一致するか比較 (#4-e101〜#4-e112)
+        # 実際のOCR精度は不完全であるため、ここで AssertionError が発生して落ちる設計 (# 処理4修正d)
+        for p in range(1, 13):
+            stem = f"2022年ホリエモン新党_{p:04d}"
+            xml_file = sub_dir / f"{stem}.xml"
+            ans_file = FIXTURES_ANS_DIR / f"{stem}.xml"
+            self.assertTrue(xml_file.is_file(), f"XML file not created: {xml_file}")
+            self.assertTrue(ans_file.is_file(), f"Ans file not found: {ans_file}")
+            self.assertEqual(
+                xml_file.read_text(encoding="utf-8").strip(),
+                ans_file.read_text(encoding="utf-8").strip(),
+                f"OCR result did not match expected solution for {stem} (# 処理4修正d: OCR不完全のため失敗)",
+            )
 
 
 if __name__ == "__main__":

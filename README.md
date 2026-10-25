@@ -56,15 +56,16 @@
 
 | エンジン方式 | 外部ツールのインストール | インターネット接続 | 特徴・向いている環境 |
 | :--- | :---: | :---: | :--- |
-| **A. Claude Vision API**<br>*(推奨)* | **不要**<br>(pipライブラリのみ) | 必要 | **OSへの外部バイナリ/OCRツール導入が不要。** 高精度な様式判別。APIキーがあれば即座に利用可能。 |
-| **B. Tesseract OCR**<br>*(ローカル)* | **必要**<br>(Tesseract本体 + 日本語データ) | 不要<br>(完全オフライン) | **完全オフライン環境で動作。** 外部API通信不可のセキュア環境向け。OSごとのTesseract導入が必要。 |
-| **C. モック / ダミー**<br>*(テスト用)* | **不要** | 不要 | ユニットテストやフィクスチャ検証用。環境構築なしで動作確認可能。 |
+| **A. Claude Vision API**</br>*(推奨)* | **不要**</br>(pipライブラリのみ) | 必要 | **OSへの外部バイナリ/OCRツール導入が不要。** 高精度な様式判別。APIキーがあれば即座に利用可能。 |
+| **B. Tesseract OCR**</br>*(ローカル)* | **必要**</br>(Tesseract本体 + 日本語データ) | 不要</br>(完全オフライン) | **完全オフライン環境で動作。** 外部API通信不可のセキュア環境向け。OSごとのTesseract導入が必要。 |
+| **C. モック / ダミー**</br>*(テスト用)* | **不要** | 不要 | ユニットテストやフィクスチャ検証用。環境構築なしで動作確認可能。 |
 
 > 💡 **「Tesseract などの外部プラグイン・バイナリをOSにインストールしたくない／できない環境」の場合**:  
 > **方式A（Claude Vision API）** を選択してください。OSへの追加ツールの導入は一切不要で、Python環境とAPIキーのみで動作します。  
 > また、万が一どちらの環境も整っていない場合でも、システムは異常終了せず安全に空のXMLスケルトンを作成して後続処理を継続するフォールバック設計（仕様 `#4-i`）を備えています。
 
 ### 2.2 システム要件
+
 - **OS**: Windows 10/11, macOS, Linux
 - **Python**: 3.10 以上
 
@@ -172,7 +173,9 @@ transform-xml --all 24
 各工程を単独で実行・検証したい場合は、以下のコマンドを使用します。
 
 #### #1 サイト巡回PG (`site_crawler`)
+
 地方公共団体コード県を指定し、PDFリンクを巡回収集して `pdf_links.csv` を作成します。
+
 ```bash
 transform-xml --crawl 24
 # スクリプト直接実行
@@ -180,7 +183,9 @@ python src/transform_xml/site_crawler.py 24
 ```
 
 #### #2 PDF取得PG (`pdf_downloader`)
+
 `pdf_links.csv` を含むディレクトリを走査し、PDFをダウンロード保存します。
+
 ```bash
 transform-xml --fetch-pdfs C:\transfer-xml\24
 # スクリプト直接実行
@@ -188,7 +193,9 @@ python src/transform_xml/pdf_downloader.py C:\transfer-xml\24 --sleep 0.5
 ```
 
 #### #3 PDF画像変換PG (`pdf_image_converter`)
+
 ディレクトリ内のPDFを走査し、各ページを画像（PNG等）に変換します。
+
 ```bash
 transform-xml --convert-pdfs C:\transfer-xml\24
 # スクリプト直接実行 (解像度300 DPI、JPEG形式の例)
@@ -196,17 +203,24 @@ python src/transform_xml/pdf_image_converter.py C:\transfer-xml\24 --dpi 300 --f
 ```
 
 #### #4 画像XML部分変換PG (`image_xml_converter`)
+
 変換画像からOCRで様式番号・枝番を判別し、部分XMLを作成します。
+
 ```bash
 # ローカルOCR (Tesseract) または settings.env の設定を使用
 transform-xml --convert-images-to-xml C:\transfer-xml\24
 
 # Claude API を明示指定して実行
 transform-xml --convert-images-to-xml C:\transfer-xml\24 --ocr-engine claude
+
+# スクリプト直接実行
+python src/transform_xml/image_xml_converter.py C:\transfer-xml\24
 ```
 
 #### #5 XML部分統合PG (`xml_integrator`)
+
 各ページの部分XMLを `SYUUSI_least.xml` テンプレートに統合し、提出用XMLを成形します。
+
 ```bash
 transform-xml --integrate-xml C:\transfer-xml\24
 # スクリプト直接実行
@@ -262,13 +276,16 @@ TEMPLATE_DIR=config/template
 
 1. [Anthropic Console](https://console.anthropic.com/) にてアカウントを作成し、APIキー（`sk-ant-...`）を発行します。
 2. `config/settings.env` に以下を設定します。
+
    ```env
    CLAUDE_API_KEY=sk-ant-api03-...
    OCR_ENGINE=claude
    CLAUDE_MODEL=claude-haiku-4-5-20251001
    ```
+
 3. **疎通確認ツールの実行**:
    APIキーが有効か、モデルと通信できるかを単独検証スクリプトで即座にテストできます。
+
    ```bash
    # 基本疎通確認 (settings.env から自動読み込み)
    python verify_claude_api.py
@@ -287,6 +304,7 @@ TEMPLATE_DIR=config/template
 ### 7.1 OS別インストール手順
 
 #### Windows
+
 1. [UB-Mannheim/tesseract (GitHub Wiki)](https://github.com/UB-Mannheim/tesseract/wiki) よりインストーラ（`tesseract-ocr-w64-setup-*.exe`）をダウンロードして実行します。
 2. コンポーネント選択画面で以下にチェックを入れます：
    - `Additional script data` $\rightarrow$ **Japanese script**
@@ -294,17 +312,20 @@ TEMPLATE_DIR=config/template
 3. インストール先（例: `C:\Program Files\Tesseract-OCR`）をシステムの環境変数 `PATH` に追加します。
 
 #### macOS
+
 ```bash
 brew install tesseract tesseract-lang
 ```
 
 #### Linux (Ubuntu / Debian)
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y tesseract-ocr tesseract-ocr-jpn
 ```
 
 ### 7.2 インストール確認
+
 ```bash
 # バージョン確認
 tesseract --version
