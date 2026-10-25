@@ -25,6 +25,7 @@ from transform_xml.image_xml_converter import (
     LocalOcrEngine,
     MockOcrEngine,
     PageXmlRecord,
+    build_template_reference_text,
     build_xml_from_template,
     convert_images_in_dir,
     convert_xmls_in_target_dir,
@@ -33,8 +34,10 @@ from transform_xml.image_xml_converter import (
     find_xml_convert_targets,
     get_ocr_engine,
     get_xml_template,
+    load_all_indata_templates,
     load_claude_prompt,
     main,
+    parse_template_filename,
     resolve_indata_template_path,
     resolve_template_dir,
     write_xml_conversion_logs,
@@ -398,6 +401,101 @@ class TestImageXmlConverter(unittest.TestCase):
         self.assertIsNone(branch)
         self.assertEqual(xml_text, "<SYUUSHI07_01></SYUUSHI07_01>")
 
+    def test_claude_ocr_engine_fallback_on_invalid_japanese_xml(self):
+        """Test ClaudeOcrEngine falls back to template when Claude returns invalid Japanese tags."""
+        engine = ClaudeOcrEngine(api_key="dummy_key")
+        dummy_img = self.temp_path / "dummy_0011.png"
+        dummy_img.write_bytes(b"\x89PNG\r\n\x1a\n dummy")
+
+        # Claudeが様式17に対して日本語独自タグを返してしまった場合（本不具合の再現）
+        invalid_xml = "<資産等の状況><資産等の有無><ア土地有無>0</ア土地有無></資産等の有無></資産等の状況>"
+        fake_api_reply = json.dumps(
+            {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "form_number": 17,
+                                "branch_number": None,
+                                "xml": invalid_xml,
+                            }
+                        ),
+                    }
+                ]
+            }
+        ).encode("utf-8")
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = fake_api_reply
+        mock_resp.__enter__.return_value = mock_resp
+
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            form, branch, xml_text, err = engine.process_image(dummy_img)
+
+        self.assertIsNone(err)
+        self.assertEqual(form, 17)
+        self.assertIsNone(branch)
+        # 日本語タグではなく、様式17のテンプレート 17_indata.xml (<SYUUSHI07_17>) がフォールバックされること
+        self.assertIn("<SYUUSHI07_17>", xml_text)
+        self.assertIn("<TOCHI_UMU>0</TOCHI_UMU>", xml_text)
+        self.assertNotIn("<資産等の状況>", xml_text)
+
+    def test_claude_ocr_engine_audit_opinion_returns_empty(self):
+        """Test ClaudeOcrEngine returns empty xml when form_number is null (e.g. audit opinion)."""
+        engine = ClaudeOcrEngine(api_key="dummy_key")
+        dummy_img = self.temp_path / "dummy_0013.png"
+        dummy_img.write_bytes(b"\x89PNG\r\n\x1a\n dummy")
+
+        fake_api_reply = json.dumps(
+            {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '{"form_number": null, "branch_number": null, "xml": ""}',
+                    }
+                ]
+            }
+        ).encode("utf-8")
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = fake_api_reply
+        mock_resp.__enter__.return_value = mock_resp
+
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            form, branch, xml_text, err = engine.process_image(dummy_img)
+
+        self.assertIsNone(err)
+        self.assertIsNone(form)
+        self.assertIsNone(branch)
+        self.assertEqual(xml_text, "")
+
+    def test_parse_template_filename(self):
+        """Test parse_template_filename extracts form, branch, and row status (#4-e)."""
+        self.assertEqual(parse_template_filename("01_indata.xml"), (1, None, False))
+        self.assertEqual(parse_template_filename("07_02_indata_row.xml"), (7, 2, True))
+        self.assertEqual(parse_template_filename("14_01_indata.xml"), (14, 1, False))
+        self.assertEqual(parse_template_filename("17_indata.xml"), (17, None, False))
+        self.assertEqual(parse_template_filename("18_12_indata_row.xml"), (18, 12, True))
+        self.assertEqual(parse_template_filename("invalid.txt"), (None, None, False))
+
+    def test_load_all_indata_templates(self):
+        """Test load_all_indata_templates loads all 49 indata templates (#4-e)."""
+        templates = load_all_indata_templates()
+        self.assertEqual(len(templates), 49)
+        filenames = [t["filename"] for t in templates]
+        self.assertIn("01_indata.xml", filenames)
+        self.assertIn("17_indata.xml", filenames)
+        self.assertIn("20_indata.xml", filenames)
+
+    def test_build_template_reference_text(self):
+        """Test build_template_reference_text generates markdown with template contents (#4-e, #4-j)."""
+        ref_text = build_template_reference_text()
+        self.assertIn("収支報告書XMLテンプレート一覧 (全49種類)", ref_text)
+        self.assertIn("### テンプレート: 17_indata.xml", ref_text)
+        self.assertIn("<SYUUSHI07_17>", ref_text)
+        self.assertIn("<TOCHI_UMU>0</TOCHI_UMU>", ref_text)
+
     def test_claude_ocr_engine_no_api_key(self):
         """Test ClaudeOcrEngine returns error when api key is empty."""
         engine = ClaudeOcrEngine(api_key="")
@@ -492,11 +590,14 @@ class TestImageXmlConverter(unittest.TestCase):
         self.assertIn("<DANTAI_NM>テスト政治団体</DANTAI_NM>", xml_norow)
 
     def test_load_claude_prompt(self):
-        """Test loading Claude prompt from external markdown file (#4-i)."""
+        """Test loading Claude prompt from external markdown file (#4-i, #4-j)."""
         prompt_txt = load_claude_prompt()
         self.assertIn("政治資金収支報告書 OCR画像解析指示書", prompt_txt)
         self.assertIn("様式番号および様式枝番の特定", prompt_txt)
         self.assertIn("form_number", prompt_txt)
+        self.assertIn("収支報告書XMLテンプレート一覧 (全49種類)", prompt_txt)
+        self.assertIn("17_indata.xml", prompt_txt)
+        self.assertIn("<SYUUSHI07_17>", prompt_txt)
 
     def test_main_cli_mock(self):
         """Test CLI main invocation."""

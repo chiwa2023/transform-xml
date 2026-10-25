@@ -446,36 +446,134 @@ def build_xml_from_template(
     return result_xml
 
 
-def load_claude_prompt(prompt_path: Path | None = None) -> str:
-    """Load Claude vision prompt from external markdown file (#4-i).
+def parse_template_filename(filename: str) -> tuple[int | None, int | None, bool]:
+    """Parse form number, branch number, and whether it's a row template from filename (#4-e).
+
+    Examples:
+        '01_indata.xml' -> (1, None, False)
+        '07_02_indata_row.xml' -> (7, 2, True)
+        '14_01_indata.xml' -> (14, 1, False)
+        '17_indata.xml' -> (17, None, False)
+        '18_12_indata_row.xml' -> (18, 12, True)
+    """
+    m = re.match(r"^(\d+)(?:_(\d+))?_indata(?:_row)?\.xml$", filename, re.IGNORECASE)
+    if not m:
+        return None, None, False
+    form_num = int(m.group(1))
+    branch_num = int(m.group(2)) if m.group(2) else None
+    is_row = "_row" in filename.lower()
+    return form_num, branch_num, is_row
+
+
+def load_all_indata_templates(template_dir: Path | None = None) -> list[dict]:
+    """Load all indata XML template files sorted by filename (#4-e, #4-j).
+
+    Returns:
+        List of dicts:
+        [
+            {
+                "filename": "01_indata.xml",
+                "form_number": 1,
+                "branch_number": None,
+                "is_row_template": False,
+                "xml_content": "<SYUUSHI07_01>...",
+            },
+            ...
+        ]
+    """
+    t_dir = resolve_template_dir(template_dir)
+    if not t_dir.is_dir():
+        return []
+
+    xml_files = sorted(list(t_dir.glob("*.xml")), key=lambda p: p.name)
+    templates = []
+    for f in xml_files:
+        f_num, b_num, is_row = parse_template_filename(f.name)
+        if f_num is not None:
+            content = f.read_text(encoding="utf-8")
+            templates.append(
+                {
+                    "filename": f.name,
+                    "form_number": f_num,
+                    "branch_number": b_num,
+                    "is_row_template": is_row,
+                    "xml_content": content,
+                }
+            )
+    return templates
+
+
+def build_template_reference_text(template_dir: Path | None = None) -> str:
+    """Build markdown reference text of all 49 indata templates for Claude (#4-e, #4-j)."""
+    templates = load_all_indata_templates(template_dir)
+    if not templates:
+        return ""
+
+    lines = [
+        "\n\n## 4. 収支報告書XMLテンプレート一覧 (全49種類)\n",
+        "画像解析により特定した【様式番号】および【様式枝番】をキーとして、以下のテンプレート一覧から合致するテンプレートを1つ選択してください。\n",
+        "選択したテンプレートのXML構造（タグ名および階層構造）を厳密に保持し、画像内の値を埋め込んでください。\n",
+        "※タグ名（例: <SYUUSHI07_XX>, <SHEET>, <ROW>, <TOCHI_UMU> 等の大文字英数字）はそのまま使用してください。日本語タグの独自生成は厳正に禁止します。\n",
+    ]
+
+    for t in templates:
+        b_str = str(t["branch_number"]) if t["branch_number"] is not None else "なし"
+        row_str = "あり (<ROW>〜</ROW> の増減対象)" if t["is_row_template"] else "なし (タグ増減なし)"
+        lines.append(f"### テンプレート: {t['filename']}")
+        lines.append(f"- キー: 様式番号 = {t['form_number']}, 様式枝番 = {b_str}")
+        lines.append(f"- 表形式 (_row): {row_str}")
+        lines.append("```xml")
+        lines.append(t["xml_content"].strip())
+        lines.append("```\n")
+
+    return "\n".join(lines)
+
+
+def load_claude_prompt(
+    prompt_path: Path | None = None,
+    template_dir: Path | None = None,
+    include_templates: bool = True,
+) -> str:
+    """Load Claude vision prompt from external markdown file and append templates (#4-e, #4-i, #4-j).
 
     Args:
         prompt_path: Path to markdown prompt file. If None, checks default candidate paths.
+        template_dir: Directory containing indata XML templates.
+        include_templates: Whether to append all XML templates as reference.
 
     Returns:
-        Prompt markdown string.
+        Full prompt markdown string.
     """
+    base_prompt = ""
     if prompt_path and prompt_path.is_file():
-        return prompt_path.read_text(encoding="utf-8")
+        base_prompt = prompt_path.read_text(encoding="utf-8")
+    else:
+        candidates = [
+            Path("config") / DEFAULT_PROMPT_MD_NAME,
+            Path(__file__).resolve().parent.parent.parent / "config" / DEFAULT_PROMPT_MD_NAME,
+        ]
+        for c in candidates:
+            if c.is_file():
+                base_prompt = c.read_text(encoding="utf-8")
+                break
 
-    candidates = [
-        Path("config") / DEFAULT_PROMPT_MD_NAME,
-        Path(__file__).resolve().parent.parent.parent / "config" / DEFAULT_PROMPT_MD_NAME,
-    ]
-    for c in candidates:
-        if c.is_file():
-            return c.read_text(encoding="utf-8")
+    if not base_prompt:
+        base_prompt = (
+            "この画像は日本の政治資金収支報告書の1ページです。\n"
+            "1. 画像内の様式番号（その1〜その20）と枝番を特定してください。\n"
+            "2. 監査意見書など「その〜」が存在しないページは様式番号を null としてください。\n"
+            "3. テンプレート一覧から様式番号・枝番をキーに該当するテンプレートを選択し、値を埋めてXMLを生成してください。\n"
+            "4. 表形式（_row）で行がある場合は<ROW>を複製し、行がない場合は<ROW>を削除してください。\n"
+            "回答は以下のJSON形式のみを出力してください:\n"
+            '{"form_number": <int または null>, "branch_number": <int または null>, "xml": "<生成されたXML文字列>"}'
+        )
 
-    # フォールバック
-    return (
-        "この画像は日本の政治資金収支報告書の1ページです。\n"
-        "1. 画像内の様式番号（その1〜その20）と枝番を特定してください。\n"
-        "2. 監査意見書など「その〜」が存在しないページは様式番号を null としてください。\n"
-        "3. 総務省政治資金収支報告書ソフトウェア互換の部分XMLを抽出・生成してください。\n"
-        "4. 表形式（_row）で行がある場合は<ROW>を複製し、行がない場合は<ROW>を削除してください。\n"
-        "回答は以下のJSON形式のみを出力してください:\n"
-        '{"form_number": <int または null>, "branch_number": <int または null>, "xml": "<生成されたXML文字列>"}'
-    )
+    if include_templates:
+        tpl_ref = build_template_reference_text(template_dir)
+        if tpl_ref:
+            base_prompt = base_prompt.rstrip() + "\n" + tpl_ref
+
+    return base_prompt
 
 
 class BaseOcrEngine:
@@ -517,7 +615,11 @@ class ClaudeOcrEngine(BaseOcrEngine):
         self.prompt_path = prompt_path
         self.template_dir = template_dir
         self.enable_prompt_caching = enable_prompt_caching
-        self.prompt_text = load_claude_prompt(prompt_path)
+        self.prompt_text = load_claude_prompt(
+            prompt_path=prompt_path,
+            template_dir=template_dir,
+            include_templates=True,
+        )
 
     def process_image(
         self,
@@ -612,9 +714,25 @@ class ClaudeOcrEngine(BaseOcrEngine):
             branch_num = parsed.get("branch_number")
             xml_str = parsed.get("xml", "")
 
-            # XMLが空で様式番号がある場合はテンプレートをフォールバック
-            if not xml_str and form_num is not None:
-                xml_str = get_xml_template(form_num, branch_num, template_dir=self.template_dir)
+            # 監査意見書など「その〜」が存在しない対象外ページ (#4-e013)
+            if form_num is None:
+                return None, None, "", None
+
+            # XMLが空または不正形式（総務省標準の <SYUUSHI07_ タグが含まれない）の場合、
+            # 様式番号・様式枝番をキーにテンプレートを選択してフォールバック (#4-e, #4-g)
+            is_valid_xml = bool(xml_str and "<SYUUSHI07_" in xml_str)
+            if not is_valid_xml:
+                t_path, is_row = resolve_indata_template_path(
+                    form_num, branch_num, template_dir=self.template_dir
+                )
+                raw_tpl = get_xml_template(
+                    form_num, branch_num, template_dir=self.template_dir
+                )
+                if is_row:
+                    # 表に行の記載がないとみなして <ROW> タグを削除 (#4-g)
+                    xml_str = build_xml_from_template(raw_tpl, is_row_template=True, rows=None)
+                else:
+                    xml_str = raw_tpl
 
             return form_num, branch_num, xml_str, None
 
